@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:sizer/sizer.dart';
 
 import '../core/app_export.dart';
@@ -7,6 +8,10 @@ import '../widgets/custom_error_widget.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await Supabase.initialize(
+    url: 'https://qrhxvubpyigocvtflgvn.supabase.co',
+    publishableKey: 'sb_publishable__85Hn7kQDFuMWl3S7ar9LQ__Wc52SYy',
+  );
 
   bool hasShownError = false;
 

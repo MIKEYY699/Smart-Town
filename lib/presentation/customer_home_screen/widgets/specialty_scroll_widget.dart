@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../theme/app_theme.dart';
 import '../../../widgets/custom_image_widget.dart';
@@ -41,7 +41,7 @@ class SpecialtyScrollWidget extends StatelessWidget {
       name: 'Home Tuition',
       subtitle: 'All subjects, all grades',
       imageUrl:
-          'https://images.pixabay.com/photo/2015/07/17/22/43/student-849825_1280.jpg',
+          'https://images.pexels.com/photos/2219024/pexels-photo-2219024.jpeg',
       semanticLabel: 'Tutor teaching student at table with books',
       providerCount: 15,
     ),
@@ -59,7 +59,7 @@ class SpecialtyScrollWidget extends StatelessWidget {
       name: 'Tailoring',
       subtitle: 'Stitching & alterations',
       imageUrl:
-          'https://images.pixabay.com/photo/2016/11/19/15/50/sewing-1839757_1280.jpg',
+          'https://images.pexels.com/photos/2219024/pexels-photo-2219024.jpeg',
       semanticLabel: 'Tailor working at sewing machine with fabric',
       providerCount: 6,
     ),

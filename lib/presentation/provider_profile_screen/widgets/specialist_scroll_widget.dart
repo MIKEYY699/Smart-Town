@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../theme/app_theme.dart';
 import '../../../widgets/custom_image_widget.dart';
@@ -68,7 +68,7 @@ class SpecialistScrollWidget extends StatelessWidget {
       role: 'Refrigeration',
       rating: 4.6,
       imageUrl:
-          'https://images.pixabay.com/photo/2018/01/15/07/51/woman-3083383_1280.jpg',
+          'https://images.pexels.com/photos/2219024/pexels-photo-2219024.jpeg',
       semanticLabel: 'Refrigeration technician Tariq Ali holding tools',
     ),
   ];

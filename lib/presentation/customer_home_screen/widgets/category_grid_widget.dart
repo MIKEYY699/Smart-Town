@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../widgets/custom_image_widget.dart';
 
@@ -47,7 +47,7 @@ class _CategoryGridWidgetState extends State<CategoryGridWidget>
       id: 'electrical',
       name: 'Electrical',
       imageUrl:
-          'https://images.pixabay.com/photo/2017/08/06/12/52/electrician-2591798_1280.jpg',
+          'https://images.pexels.com/photos/2219024/pexels-photo-2219024.jpeg',
       semanticLabel:
           'Electrician working on electrical panel with safety equipment',
     ),
@@ -69,7 +69,7 @@ class _CategoryGridWidgetState extends State<CategoryGridWidget>
       id: 'painting',
       name: 'Painting',
       imageUrl:
-          'https://images.pixabay.com/photo/2016/11/29/09/32/construction-1868667_1280.jpg',
+          'https://images.pexels.com/photos/2219024/pexels-photo-2219024.jpeg',
       semanticLabel: 'Painter applying white paint to wall with roller',
     ),
     _CategoryItem(
@@ -90,7 +90,7 @@ class _CategoryGridWidgetState extends State<CategoryGridWidget>
       id: 'mobile_repair',
       name: 'Mobile Repair',
       imageUrl:
-          'https://images.pixabay.com/photo/2016/01/09/18/27/laptop-1130731_1280.jpg',
+          'https://images.pexels.com/photos/2219024/pexels-photo-2219024.jpeg',
       semanticLabel:
           'Technician repairing smartphone with small tools on workbench',
     ),

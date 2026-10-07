@@ -55,7 +55,7 @@ class _AppNavigationState extends State<AppNavigation> {
       label: 'Profile',
       iconName: 'person_outline',
       selectedIconName: 'person',
-      branchIndex: null,
+      branchIndex: 3,
     ),
   ];
 

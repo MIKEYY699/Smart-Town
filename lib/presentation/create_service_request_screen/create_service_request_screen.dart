@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import 'package:supabase_flutter/supabase_flutter.dart' show Supabase;
+
 import '../../theme/app_theme.dart';
 import './widgets/request_category_selector_widget.dart';
 import './widgets/request_location_widget.dart';
@@ -9,6 +11,7 @@ import './widgets/request_media_widget.dart';
 import './widgets/request_problem_widget.dart';
 import './widgets/request_schedule_widget.dart';
 import './widgets/request_urgency_widget.dart';
+import '../../routes/app_routes.dart';
 
 class CreateServiceRequestScreen extends StatefulWidget {
   const CreateServiceRequestScreen({super.key});
@@ -87,11 +90,31 @@ class _CreateServiceRequestScreenState
       return;
     }
     setState(() => _isSubmitting = true);
-    // TODO: Replace with actual API call to submit service request
-    await Future.delayed(const Duration(seconds: 2));
-    if (mounted) {
+    try {
+      final client = Supabase.instance.client;
+      await client.from('service_requests').insert({
+        'customer_id': client.auth.currentUser!.id,
+        'category': _selectedCategoryName,
+        'description': _problemDescription.trim(),
+        'urgency': _urgencyLevel.toLowerCase(),
+        'preferred_date': _preferredDate?.toIso8601String().split('T').first,
+        'preferred_time': _preferredTime?.format(context),
+      });
+      if (!mounted) return;
       setState(() => _isSubmitting = false);
       _showSuccessDialog();
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _isSubmitting = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text(
+            'Could not submit. Check your description and internet, then try again.',
+          ),
+          backgroundColor: AppTheme.error,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     }
   }
 
@@ -142,7 +165,7 @@ class _CreateServiceRequestScreenState
               child: ElevatedButton(
                 onPressed: () {
                   Navigator.of(context).pop();
-                  Navigator.of(context).pop();
+                  context.go(AppRoutes.myRequestsScreen);
                 },
                 child: const Text('View My Requests'),
               ),
@@ -170,7 +193,7 @@ class _CreateServiceRequestScreenState
             color: Color(0xFF1A1A1A),
             size: 20,
           ),
-          onPressed: () => context.pop(),
+          onPressed: () => context.go(AppRoutes.myRequestsScreen),
         ),
         title: Text(
           'New Service Request',
