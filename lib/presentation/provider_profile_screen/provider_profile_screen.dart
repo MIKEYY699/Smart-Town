@@ -1,17 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show Supabase;
 
 import '../../routes/app_routes.dart';
 import '../../theme/app_theme.dart';
-import './widgets/provider_hero_widget.dart';
-import './widgets/provider_info_card_widget.dart';
-import './widgets/provider_reviews_widget.dart';
-import './widgets/provider_services_widget.dart';
-import './widgets/provider_stats_pills_widget.dart';
-import './widgets/specialist_scroll_widget.dart';
-import './widgets/working_hours_widget.dart';
 
+class _ProfileData {
+  final Map<String, dynamic> provider;
+  final List<Map<String, dynamic>> reviews;
+
+  const _ProfileData(this.provider, this.reviews);
+}
+
+/// What customers see when they tap a provider.
 class ProviderProfileScreen extends StatefulWidget {
   final String providerId;
 
@@ -22,246 +24,329 @@ class ProviderProfileScreen extends StatefulWidget {
 }
 
 class _ProviderProfileScreenState extends State<ProviderProfileScreen> {
-  // TODO: Replace with Riverpod/Bloc for production
-  int _selectedSpecialistIndex = 0;
-  bool _isBookmarked = false;
-
-  void _onBookmark() => setState(() => _isBookmarked = !_isBookmarked);
-
-  void _onRequestService() {
-    context.push(AppRoutes.createServiceRequestScreen);
-  }
+  late Future<_ProfileData?> _future;
 
   @override
-  Widget build(BuildContext context) {
-    final isTablet = MediaQuery.of(context).size.width >= 600;
-
-    if (isTablet) {
-      return _buildTabletLayout(context);
-    }
-    return _buildPhoneLayout(context);
+  void initState() {
+    super.initState();
+    _future = _load();
   }
 
-  Widget _buildPhoneLayout(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppTheme.backgroundLight,
-      body: Stack(
+  Future<_ProfileData?> _load() async {
+    final client = Supabase.instance.client;
+
+    final provider = await client
+        .from('providers')
+        .select(
+          'id, full_name, description, experience_years, verification, '
+          'availability, emergency_available, rating_avg, rating_count, '
+          'professions(name)',
+        )
+        .eq('id', widget.providerId)
+        .maybeSingle();
+
+    if (provider == null) return null;
+
+    final reviews = await client
+        .from('reviews')
+        .select('rating, comment, created_at')
+        .eq('provider_id', widget.providerId)
+        .order('created_at', ascending: false)
+        .limit(20);
+
+    return _ProfileData(
+      Map<String, dynamic>.from(provider),
+      List<Map<String, dynamic>>.from(reviews),
+    );
+  }
+
+  Color _availabilityColor(String value) {
+    switch (value) {
+      case 'available':
+        return AppTheme.success;
+      case 'busy':
+        return AppTheme.warning;
+      default:
+        return const Color(0xFF9E9E9E);
+    }
+  }
+
+  Widget _stat(String value, String label) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Column(
+          children: [
+            Text(
+              value,
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              label,
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 11,
+                color: const Color(0xFF9E9E9E),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _reviewCard(Map<String, dynamic> review) {
+    final rating = (review['rating'] as num?)?.toInt() ?? 0;
+    final comment = review['comment'] as String?;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          CustomScrollView(
-            slivers: [
-              SliverToBoxAdapter(
-                child: ProviderHeroWidget(
-                  onBack: () => context.pop(),
-                  onShare: _onBookmark,
-                  isBookmarked: _isBookmarked,
-                ),
+          Row(
+            children: List.generate(
+              5,
+              (i) => Icon(
+                i < rating ? Icons.star : Icons.star_border,
+                color: const Color(0xFFF59E0B),
+                size: 18,
               ),
-              SliverToBoxAdapter(child: ProviderStatsPillsWidget()),
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-                  child: SpecialistScrollWidget(
-                    selectedIndex: _selectedSpecialistIndex,
-                    onSpecialistTap: (i) =>
-                        setState(() => _selectedSpecialistIndex = i),
-                  ),
-                ),
-              ),
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-                  child: ProviderInfoCardWidget(),
-                ),
-              ),
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-                  child: WorkingHoursWidget(),
-                ),
-              ),
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-                  child: ProviderServicesWidget(),
-                ),
-              ),
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-                  child: ProviderReviewsWidget(),
-                ),
-              ),
-              const SliverToBoxAdapter(child: SizedBox(height: 120)),
-            ],
+            ),
           ),
-          // Sticky bottom booking bar
-          Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            child: _buildBookingBar(context),
-          ),
+          if (comment != null && comment.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Text(
+              comment,
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 13,
+                color: const Color(0xFF5C5C5C),
+                height: 1.4,
+              ),
+            ),
+          ],
         ],
       ),
     );
   }
 
-  Widget _buildTabletLayout(BuildContext context) {
+  Widget _title(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 22, bottom: 10),
+      child: Text(
+        text,
+        style: GoogleFonts.plusJakartaSans(
+          fontSize: 16,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.backgroundLight,
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(
-            Icons.arrow_back_ios_new,
-            color: Color(0xFF1A1A1A),
-            size: 20,
-          ),
+          icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
         title: Text(
-          'Provider Profile',
+          'Provider',
           style: GoogleFonts.plusJakartaSans(
             fontSize: 18,
             fontWeight: FontWeight.w700,
             color: const Color(0xFF1A1A1A),
           ),
         ),
-        actions: [
-          IconButton(
-            icon: Icon(
-              _isBookmarked ? Icons.bookmark : Icons.bookmark_border,
-              color: AppTheme.primary,
-            ),
-            onPressed: _onBookmark,
-          ),
-        ],
+        centerTitle: true,
       ),
-      body: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            flex: 5,
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                children: [
-                  ProviderHeroWidget(
-                    onBack: null,
-                    onShare: _onBookmark,
-                    isBookmarked: _isBookmarked,
+      body: SafeArea(
+        child: FutureBuilder<_ProfileData?>(
+          future: _future,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState != ConnectionState.done) {
+              return const Center(child: CircularProgressIndicator());
+            }
+
+            if (snapshot.hasError) {
+              // Also happens when the id is not a real provider id.
+              return const Center(child: Text('Provider not found'));
+            }
+
+            final data = snapshot.data;
+            if (data == null) {
+              return const Center(child: Text('Provider not found'));
+            }
+
+            final p = data.provider;
+            final name = p['full_name'] as String? ?? '';
+            final professionData = p['professions'];
+            final profession = professionData is Map
+                ? (professionData['name'] as String? ?? '')
+                : '';
+            final verified = p['verification'] == 'verified';
+            final availability = p['availability'] as String? ?? 'offline';
+            final ratingCount = (p['rating_count'] as num?)?.toInt() ?? 0;
+            final ratingAvg = (p['rating_avg'] as num?)?.toDouble() ?? 0;
+            final years = (p['experience_years'] as num?)?.toInt() ?? 0;
+            final description = p['description'] as String? ?? '';
+            final emergency = p['emergency_available'] == true;
+
+            return Column(
+              children: [
+                Expanded(
+                  child: ListView(
+                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
+                    children: [
+                      Center(
+                        child: CircleAvatar(
+                          radius: 44,
+                          backgroundColor: AppTheme.primaryContainer,
+                          child: Text(
+                            name.isNotEmpty ? name[0].toUpperCase() : '?',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 36,
+                              fontWeight: FontWeight.w700,
+                              color: AppTheme.primary,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Flexible(
+                            child: Text(
+                              name,
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 20,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                          if (verified) ...[
+                            const SizedBox(width: 6),
+                            const Icon(
+                              Icons.verified,
+                              color: AppTheme.verified,
+                              size: 20,
+                            ),
+                          ],
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        profession,
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 14,
+                          color: const Color(0xFF5C5C5C),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Center(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: _availabilityColor(availability).withAlpha(30),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            availability[0].toUpperCase() +
+                                availability.substring(1),
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: _availabilityColor(availability),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      Row(
+                        children: [
+                          _stat(
+                            ratingCount == 0
+                                ? '-'
+                                : ratingAvg.toStringAsFixed(1),
+                            'Rating',
+                          ),
+                          const SizedBox(width: 10),
+                          _stat('$ratingCount', 'Reviews'),
+                          const SizedBox(width: 10),
+                          _stat('$years yr', 'Experience'),
+                        ],
+                      ),
+                      if (description.isNotEmpty) ...[
+                        _title('About'),
+                        Text(
+                          description,
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 13,
+                            color: const Color(0xFF5C5C5C),
+                            height: 1.5,
+                          ),
+                        ),
+                      ],
+                      if (emergency) ...[
+                        const SizedBox(height: 12),
+                        Text(
+                          'Available for emergency calls',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: AppTheme.primary,
+                          ),
+                        ),
+                      ],
+                      _title('Reviews'),
+                      if (data.reviews.isEmpty)
+                        const Text('No reviews yet.')
+                      else
+                        ...data.reviews.map(_reviewCard),
+                    ],
                   ),
-                  const SizedBox(height: 16),
-                  ProviderStatsPillsWidget(),
-                  const SizedBox(height: 20),
-                  WorkingHoursWidget(),
-                ],
-              ),
-            ),
-          ),
-          Expanded(
-            flex: 5,
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                children: [
-                  ProviderInfoCardWidget(),
-                  const SizedBox(height: 20),
-                  ProviderServicesWidget(),
-                  const SizedBox(height: 20),
-                  ProviderReviewsWidget(),
-                  const SizedBox(height: 20),
-                  SizedBox(
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+                  child: SizedBox(
                     width: double.infinity,
+                    height: 52,
                     child: ElevatedButton(
-                      onPressed: _onRequestService,
+                      onPressed: () =>
+                          context.push(AppRoutes.createServiceRequestScreen),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppTheme.primary,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
-                        ),
+                        foregroundColor: Colors.white,
                       ),
-                      child: Text(
-                        'Request Service',
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white,
-                        ),
-                      ),
+                      child: const Text('Request service'),
                     ),
                   ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBookingBar(BuildContext context) {
-    final bottomPadding = MediaQuery.of(context).padding.bottom;
-    return Container(
-      padding: EdgeInsets.fromLTRB(20, 16, 20, 16 + bottomPadding),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withAlpha(20),
-            blurRadius: 20,
-            offset: const Offset(0, -4),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'Starting from',
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 11,
-                  color: const Color(0xFF9E9E9E),
                 ),
-              ),
-              Text(
-                'Rs. 500 /visit',
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                  color: AppTheme.primary,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: ElevatedButton(
-              onPressed: _onRequestService,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primary,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                elevation: 0,
-              ),
-              child: Text(
-                'Request Service',
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white,
-                ),
-              ),
-            ),
-          ),
-        ],
+              ],
+            );
+          },
+        ),
       ),
     );
   }

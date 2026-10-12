@@ -10,6 +10,7 @@ import './widgets/home_search_bar_widget.dart';
 import './widgets/home_tagline_widget.dart';
 import './widgets/nearby_providers_widget.dart';
 import './widgets/specialty_scroll_widget.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show Supabase;
 
 class CustomerHomeScreen extends StatefulWidget {
   const CustomerHomeScreen({super.key});
@@ -20,8 +21,38 @@ class CustomerHomeScreen extends StatefulWidget {
 
 class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
   // TODO: Replace with Riverpod/Bloc for production
-  final String _userName = 'Adnan';
-  final String _community = 'Model Town, Gujranwala';
+  String _userName = '';
+  String _community = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProfile();
+  }
+
+  Future<void> _loadProfile() async {
+    try {
+      final client = Supabase.instance.client;
+      final row = await client
+          .from('profiles')
+          .select('full_name, communities(name, city)')
+          .eq('id', client.auth.currentUser!.id)
+          .single();
+
+      final communityData = row['communities'];
+      final fullName = (row['full_name'] as String? ?? '').trim();
+
+      if (!mounted) return;
+      setState(() {
+        _userName = fullName.split(' ').first;
+        _community = communityData is Map
+            ? '${communityData['name']}, ${communityData['city']}'
+            : '';
+      });
+    } catch (_) {
+      // Keep the screen working even if the profile could not load.
+    }
+  }
   String _searchQuery = '';
 
   void _onSearchChanged(String query) {
@@ -29,7 +60,8 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
   }
 
   void _onCategoryTap(String categoryId, String categoryName) {
-    context.push(AppRoutes.providerProfileScreen, extra: categoryId);
+    final category = categoryName == 'AC & Repair' ? 'AC Repair' : categoryName;
+    context.push(AppRoutes.providersByCategoryScreen, extra: category);
   }
 
   void _onProviderTap(String providerId) {

@@ -6,7 +6,6 @@ import 'package:supabase_flutter/supabase_flutter.dart' show Supabase;
 import '../../routes/app_routes.dart';
 import '../../theme/app_theme.dart';
 
-
 /// Shows the logged-in customer's own service requests.
 class MyRequestsScreen extends StatefulWidget {
   const MyRequestsScreen({super.key});
@@ -25,16 +24,94 @@ class _MyRequestsScreenState extends State<MyRequestsScreen> {
   }
 
   Future<List<Map<String, dynamic>>> _load() async {
-    final rows = await Supabase.instance.client
+    final client = Supabase.instance.client;
+    final userId = client.auth.currentUser!.id;
+
+    final rows = await client
         .from('service_requests')
         .select('id, category, description, urgency, status, created_at')
+        .eq('customer_id', userId)
         .order('created_at', ascending: false);
-    return List<Map<String, dynamic>>.from(rows);
+
+    final reviewRows = await client
+        .from('reviews')
+        .select('request_id')
+        .eq('customer_id', userId);
+    final reviewedIds = reviewRows.map((r) => r['request_id']).toSet();
+
+    return rows.map<Map<String, dynamic>>((r) {
+      final copy = Map<String, dynamic>.from(r);
+      copy['reviewed'] = reviewedIds.contains(r['id']);
+      return copy;
+    }).toList();
+  }
+
+  Future<void> _rateProvider(String requestId) async {
+    final result = await showDialog<_ReviewResult>(
+      context: context,
+      builder: (_) => const _ReviewDialog(),
+    );
+    if (result == null || !mounted) return;
+
+    try {
+      await Supabase.instance.client.rpc(
+        'submit_review',
+        params: {
+          'p_request_id': requestId,
+          'p_rating': result.rating,
+          'p_comment': result.comment,
+        },
+      );
+      if (!mounted) return;
+      await _refresh();
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not submit your review.')),
+      );
+    }
+  }
+
+  Future<void> _cancelRequest(String requestId) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Cancel this request?'),
+        content: const Text('The provider will no longer see it.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Keep'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Cancel request'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    try {
+      await Supabase.instance.client
+          .from('service_requests')
+          .update({'status': 'cancelled'})
+          .eq('id', requestId);
+      if (!mounted) return;
+      await _refresh();
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not cancel. Try again.')),
+      );
+    }
   }
 
   Future<void> _refresh() async {
     final newFuture = _load();
-    setState(() => _future = newFuture);
+    setState(() {
+      _future = newFuture;
+    });
     await newFuture;
   }
 
@@ -144,6 +221,43 @@ class _MyRequestsScreenState extends State<MyRequestsScreen> {
               color: const Color(0xFF9E9E9E),
             ),
           ),
+          if (status == 'completed') ...[
+            const SizedBox(height: 12),
+            if (request['reviewed'] == true)
+              Text(
+                'You reviewed this job',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.success,
+                ),
+              )
+            else
+              SizedBox(
+                width: double.infinity,
+                height: 44,
+                child: OutlinedButton.icon(
+                  onPressed: () => _rateProvider(request['id'] as String),
+                  icon: const Icon(Icons.star_border),
+                  label: const Text('Rate provider'),
+                ),
+              ),
+          ],
+          if (status == 'requested' || status == 'accepted') ...[
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              height: 44,
+              child: OutlinedButton(
+                onPressed: () => _cancelRequest(request['id'] as String),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppTheme.error,
+                  side: const BorderSide(color: AppTheme.error),
+                ),
+                child: const Text('Cancel request'),
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -230,6 +344,87 @@ class _MyRequestsScreenState extends State<MyRequestsScreen> {
           ],
         ),
       ),
+    );
+  }
+}
+
+
+class _ReviewResult {
+  final int rating;
+  final String comment;
+
+  const _ReviewResult(this.rating, this.comment);
+}
+
+/// The rating box. It owns its own text controller, so it is cleaned up
+/// only after the box has fully closed.
+class _ReviewDialog extends StatefulWidget {
+  const _ReviewDialog();
+
+  @override
+  State<_ReviewDialog> createState() => _ReviewDialogState();
+}
+
+class _ReviewDialogState extends State<_ReviewDialog> {
+  final _commentController = TextEditingController();
+  int _rating = 0;
+
+  @override
+  void dispose() {
+    _commentController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Rate this provider'),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: List.generate(5, (i) {
+                return IconButton(
+                  onPressed: () => setState(() => _rating = i + 1),
+                  icon: Icon(
+                    i < _rating ? Icons.star : Icons.star_border,
+                    color: const Color(0xFFF59E0B),
+                    size: 32,
+                  ),
+                );
+              }),
+            ),
+            TextField(
+              controller: _commentController,
+              maxLines: 3,
+              maxLength: 500,
+              decoration: const InputDecoration(
+                hintText: 'Write a short review (optional)',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: _rating == 0
+              ? null
+              : () {
+                  FocusScope.of(context).unfocus();
+                  Navigator.of(context).pop(
+                    _ReviewResult(_rating, _commentController.text.trim()),
+                  );
+                },
+          child: const Text('Submit'),
+        ),
+      ],
     );
   }
 }

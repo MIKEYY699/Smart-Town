@@ -53,7 +53,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _becomeProvider() async {
     final registered = await context.push<bool>(AppRoutes.becomeProviderScreen);
     if (registered == true && mounted) {
-      setState(() => _future = _load());
+      setState(() {
+        _future = _load();
+      });
     }
   }
 
@@ -78,7 +80,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   children: [
                     const Text('Could not load your profile'),
                     TextButton(
-                      onPressed: () => setState(() => _future = _load()),
+                      onPressed: () {
+                        setState(() {
+                          _future = _load();
+                        });
+                      },
                       child: const Text('Try again'),
                     ),
                   ],
@@ -155,6 +161,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       onPressed: _becomeProvider,
                       icon: const Icon(Icons.handyman),
                       label: const Text('Become a provider'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primary,
+                        foregroundColor: Colors.white,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                if (role == 'provider') ...[
+                  SizedBox(
+                    height: 52,
+                    child: ElevatedButton.icon(
+                      onPressed: () =>
+                          context.push(AppRoutes.providerDashboardScreen),
+                      icon: const Icon(Icons.dashboard),
+                      label: const Text('Provider dashboard'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppTheme.primary,
                         foregroundColor: Colors.white,

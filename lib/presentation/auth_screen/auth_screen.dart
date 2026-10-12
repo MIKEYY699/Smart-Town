@@ -127,7 +127,7 @@ class _AuthScreenState extends State<AuthScreen> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Text(
-                      'MohallaConnect',
+                      'Smart Town',
                       textAlign: TextAlign.center,
                       style: theme.textTheme.displaySmall?.copyWith(
                         color: AppTheme.primary,

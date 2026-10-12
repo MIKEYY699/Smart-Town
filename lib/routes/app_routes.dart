@@ -11,12 +11,16 @@ import '../presentation/provider_profile_screen/provider_profile_screen.dart';
 import '../widgets/app_scaffold.dart';
 import '../presentation/profile_screen/profile_screen.dart';
 import '../presentation/become_provider_screen/become_provider_screen.dart';
+import '../presentation/provider_dashboard_screen/provider_dashboard_screen.dart';
+import '../presentation/providers_by_category_screen/providers_by_category_screen.dart';
 
 class AppRoutes {
   static const String initial = '/';
   static const String authScreen = '/auth';
   static const String myRequestsScreen = '/my-requests';
     static const String becomeProviderScreen = '/become-provider';
+      static const String providerDashboardScreen = '/provider-dashboard';
+        static const String providersByCategoryScreen = '/providers-by-category';
   static const String customerHomeScreen = '/customer-home-screen';
   static const String providerProfileScreen = '/provider-profile-screen';
   static const String createServiceRequestScreen =
@@ -58,7 +62,12 @@ final GoRouter appRouter = GoRouter(
       path: AppRoutes.becomeProviderScreen,
       builder: (context, state) => const BecomeProviderScreen(),
     ),
+        GoRoute(
+      path: AppRoutes.providerDashboardScreen,
+      builder: (context, state) => const ProviderDashboardScreen(),
+    ),
     StatefulShellRoute.indexedStack(
+      
       builder: (context, state, navigationShell) {
         return AppScaffold(navigationShell: navigationShell);
       },
@@ -68,6 +77,13 @@ final GoRouter appRouter = GoRouter(
             GoRoute(
               path: AppRoutes.customerHomeScreen,
               builder: (context, state) => const CustomerHomeScreen(),
+            ),
+            GoRoute(
+              path: AppRoutes.providersByCategoryScreen,
+              builder: (context, state) {
+                final category = state.extra as String? ?? '';
+                return ProvidersByCategoryScreen(category: category);
+              },
             ),
           ],
         ),
