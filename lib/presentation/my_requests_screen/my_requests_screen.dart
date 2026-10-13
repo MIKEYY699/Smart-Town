@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
-import 'package:supabase_flutter/supabase_flutter.dart' show Supabase;
+import 'package:supabase_flutter/supabase_flutter.dart'
+    show PostgresChangeEvent, RealtimeChannel, Supabase;
 
 import '../../routes/app_routes.dart';
 import '../../theme/app_theme.dart';
@@ -16,11 +17,32 @@ class MyRequestsScreen extends StatefulWidget {
 
 class _MyRequestsScreenState extends State<MyRequestsScreen> {
   late Future<List<Map<String, dynamic>>> _future;
+  RealtimeChannel? _channel;
 
   @override
   void initState() {
     super.initState();
     _future = _load();
+    _channel = Supabase.instance.client
+        .channel('my-requests-changes')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'service_requests',
+          callback: (_) {
+            if (mounted) _refresh();
+          },
+        )
+        .subscribe();
+  }
+
+  @override
+  void dispose() {
+    final channel = _channel;
+    if (channel != null) {
+      Supabase.instance.client.removeChannel(channel);
+    }
+    super.dispose();
   }
 
   Future<List<Map<String, dynamic>>> _load() async {
@@ -141,8 +163,18 @@ class _MyRequestsScreenState extends State<MyRequestsScreen> {
     final date = DateTime.tryParse(iso)?.toLocal();
     if (date == null) return '';
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     return '${date.day} ${months[date.month - 1]} ${date.year}';
   }
@@ -243,6 +275,28 @@ class _MyRequestsScreenState extends State<MyRequestsScreen> {
                 ),
               ),
           ],
+          if (status == 'accepted' ||
+              status == 'on_the_way' ||
+              status == 'in_progress' ||
+              status == 'completed') ...[
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              height: 44,
+              child: OutlinedButton.icon(
+                onPressed: () => context.push(
+                  AppRoutes.chatScreen,
+                  extra: {
+                    'requestId': request['id'] as String,
+                    'title': request['category'] as String? ?? 'Chat',
+                    'canSend': status != 'completed',
+                  },
+                ),
+                icon: const Icon(Icons.chat_bubble_outline),
+                label: const Text('Chat with provider'),
+              ),
+            ),
+          ],
           if (status == 'requested' || status == 'accepted') ...[
             const SizedBox(height: 12),
             SizedBox(
@@ -302,7 +356,8 @@ class _MyRequestsScreenState extends State<MyRequestsScreen> {
               child: FutureBuilder<List<Map<String, dynamic>>>(
                 future: _future,
                 builder: (context, snapshot) {
-                  if (snapshot.connectionState != ConnectionState.done) {
+                  if (snapshot.connectionState != ConnectionState.done &&
+                      !snapshot.hasData) {
                     return const Center(child: CircularProgressIndicator());
                   }
 
@@ -347,7 +402,6 @@ class _MyRequestsScreenState extends State<MyRequestsScreen> {
     );
   }
 }
-
 
 class _ReviewResult {
   final int rating;
@@ -418,9 +472,9 @@ class _ReviewDialogState extends State<_ReviewDialog> {
               ? null
               : () {
                   FocusScope.of(context).unfocus();
-                  Navigator.of(context).pop(
-                    _ReviewResult(_rating, _commentController.text.trim()),
-                  );
+                  Navigator.of(
+                    context,
+                  ).pop(_ReviewResult(_rating, _commentController.text.trim()));
                 },
           child: const Text('Submit'),
         ),

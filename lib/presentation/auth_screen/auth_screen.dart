@@ -214,8 +214,18 @@ class _AuthScreenState extends State<AuthScreen> {
                         ),
                       ),
                       validator: (value) {
-                        if (value == null || value.length < 6) {
-                          return 'Password must be at least 6 characters';
+                        final password = value ?? '';
+                        if (password.isEmpty) {
+                          return 'Enter your password';
+                        }
+                        if (!_isLogin) {
+                          if (password.length < 8) {
+                            return 'Use at least 8 characters';
+                          }
+                          if (!RegExp(r'[A-Za-z]').hasMatch(password) ||
+                              !RegExp(r'[0-9]').hasMatch(password)) {
+                            return 'Use both letters and numbers';
+                          }
                         }
                         return null;
                       },

@@ -5,11 +5,13 @@ import '../../../widgets/custom_icon_widget.dart';
 
 class HomeSearchBarWidget extends StatelessWidget {
   final ValueChanged<String> onChanged;
+  final ValueChanged<String>? onSubmitted;
   final VoidCallback onFilterTap;
 
   const HomeSearchBarWidget({
     required this.onChanged,
     required this.onFilterTap,
+    this.onSubmitted,
     super.key,
   });
 
@@ -43,6 +45,7 @@ class HomeSearchBarWidget extends StatelessWidget {
                 Expanded(
                   child: TextField(
                     onChanged: onChanged,
+                    onSubmitted: onSubmitted,
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 14,
                       fontWeight: FontWeight.w400,

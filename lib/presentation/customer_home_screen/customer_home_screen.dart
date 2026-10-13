@@ -53,6 +53,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
       // Keep the screen working even if the profile could not load.
     }
   }
+
   String _searchQuery = '';
 
   void _onSearchChanged(String query) {
@@ -69,8 +70,9 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
   }
 
   void _onEmergencyTap() {
-    // TODO: Navigate to emergency services screen
+    context.push(AppRoutes.emergencyScreen);
   }
+  
 
   @override
   Widget build(BuildContext context) {
@@ -101,6 +103,8 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                 padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
                 child: HomeSearchBarWidget(
                   onChanged: _onSearchChanged,
+                  onSubmitted: (query) =>
+                      context.push(AppRoutes.searchScreen, extra: query.trim()),
                   onFilterTap: () {},
                 ),
               ),

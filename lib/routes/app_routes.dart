@@ -13,14 +13,20 @@ import '../presentation/profile_screen/profile_screen.dart';
 import '../presentation/become_provider_screen/become_provider_screen.dart';
 import '../presentation/provider_dashboard_screen/provider_dashboard_screen.dart';
 import '../presentation/providers_by_category_screen/providers_by_category_screen.dart';
+import '../presentation/search_providers_screen/search_providers_screen.dart';
+import '../presentation/emergency_screen/emergency_screen.dart';
+import '../presentation/chat_screen/chat_screen.dart';
 
 class AppRoutes {
   static const String initial = '/';
   static const String authScreen = '/auth';
   static const String myRequestsScreen = '/my-requests';
-    static const String becomeProviderScreen = '/become-provider';
-      static const String providerDashboardScreen = '/provider-dashboard';
-        static const String providersByCategoryScreen = '/providers-by-category';
+  static const String becomeProviderScreen = '/become-provider';
+  static const String providerDashboardScreen = '/provider-dashboard';
+  static const String providersByCategoryScreen = '/providers-by-category';
+  static const String searchScreen = '/search';
+  static const String emergencyScreen = '/emergency';
+  static const String chatScreen = '/chat';
   static const String customerHomeScreen = '/customer-home-screen';
   static const String providerProfileScreen = '/provider-profile-screen';
   static const String createServiceRequestScreen =
@@ -58,16 +64,26 @@ final GoRouter appRouter = GoRouter(
         },
       ),
     ),
-        GoRoute(
+    GoRoute(
       path: AppRoutes.becomeProviderScreen,
       builder: (context, state) => const BecomeProviderScreen(),
     ),
-        GoRoute(
+    GoRoute(
       path: AppRoutes.providerDashboardScreen,
       builder: (context, state) => const ProviderDashboardScreen(),
     ),
+    GoRoute(
+      path: AppRoutes.chatScreen,
+      builder: (context, state) {
+        final args = (state.extra as Map<String, dynamic>?) ?? const {};
+        return ChatScreen(
+          requestId: args['requestId'] as String? ?? '',
+          title: args['title'] as String? ?? 'Chat',
+          canSend: args['canSend'] as bool? ?? false,
+        );
+      },
+    ),
     StatefulShellRoute.indexedStack(
-      
       builder: (context, state, navigationShell) {
         return AppScaffold(navigationShell: navigationShell);
       },
@@ -84,6 +100,17 @@ final GoRouter appRouter = GoRouter(
                 final category = state.extra as String? ?? '';
                 return ProvidersByCategoryScreen(category: category);
               },
+            ),
+            GoRoute(
+              path: AppRoutes.searchScreen,
+              builder: (context, state) {
+                final query = state.extra as String? ?? '';
+                return SearchProvidersScreen(initialQuery: query);
+              },
+            ),
+            GoRoute(
+              path: AppRoutes.emergencyScreen,
+              builder: (context, state) => const EmergencyScreen(),
             ),
           ],
         ),

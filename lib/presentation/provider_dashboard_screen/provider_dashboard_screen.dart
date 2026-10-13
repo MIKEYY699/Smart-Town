@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:supabase_flutter/supabase_flutter.dart' show Supabase;
+import 'package:supabase_flutter/supabase_flutter.dart'
+    show PostgresChangeEvent, RealtimeChannel, Supabase;
 
+import '../../routes/app_routes.dart';
 import '../../theme/app_theme.dart';
 
 class _DashboardData {
@@ -41,14 +43,36 @@ class ProviderDashboardScreen extends StatefulWidget {
 class _ProviderDashboardScreenState extends State<ProviderDashboardScreen> {
   late Future<_DashboardData> _future;
   String? _busyRequestId;
+  RealtimeChannel? _channel;
 
   static const _columns =
-      'id, category, description, urgency, status, preferred_time, created_at';
+      'id, category, description, urgency, status, preferred_time, '
+      'photo_path, created_at';
 
   @override
   void initState() {
     super.initState();
     _future = _load();
+    _channel = Supabase.instance.client
+        .channel('provider-dashboard-changes')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'service_requests',
+          callback: (_) {
+            if (mounted) _refresh();
+          },
+        )
+        .subscribe();
+  }
+
+  @override
+  void dispose() {
+    final channel = _channel;
+    if (channel != null) {
+      Supabase.instance.client.removeChannel(channel);
+    }
+    super.dispose();
   }
 
   Future<_DashboardData> _load() async {
@@ -76,7 +100,7 @@ class _ProviderDashboardScreenState extends State<ProviderDashboardScreen> {
           .filter('provider_id', 'is', null)
           .neq('customer_id', userId)
           .order('created_at', ascending: false);
-      open = List<Map<String, dynamic>>.from(rows);
+      open = await _withPhotoUrls(List<Map<String, dynamic>>.from(rows));
     }
 
     final jobRows = await client
@@ -102,8 +126,30 @@ class _ProviderDashboardScreenState extends State<ProviderDashboardScreen> {
       ratingCount: (provider['rating_count'] as num?)?.toInt() ?? 0,
       reviews: List<Map<String, dynamic>>.from(reviewRows),
       openRequests: open,
-      myJobs: List<Map<String, dynamic>>.from(jobRows),
+      myJobs: await _withPhotoUrls(List<Map<String, dynamic>>.from(jobRows)),
     );
+  }
+
+  /// Photos are private, so each one needs a short-lived link.
+  Future<List<Map<String, dynamic>>> _withPhotoUrls(
+    List<Map<String, dynamic>> rows,
+  ) async {
+    final storage = Supabase.instance.client.storage.from('request-photos');
+    final result = <Map<String, dynamic>>[];
+
+    for (final row in rows) {
+      final copy = Map<String, dynamic>.from(row);
+      final path = row['photo_path'] as String?;
+      if (path != null) {
+        try {
+          copy['photo_url'] = await storage.createSignedUrl(path, 3600);
+        } catch (_) {
+          copy['photo_url'] = null;
+        }
+      }
+      result.add(copy);
+    }
+    return result;
   }
 
   Future<void> _refresh() async {
@@ -240,6 +286,13 @@ class _ProviderDashboardScreenState extends State<ProviderDashboardScreen> {
                 ButtonSegment(value: 'busy', label: Text('Busy')),
                 ButtonSegment(value: 'offline', label: Text('Offline')),
               ],
+              showSelectedIcon: false,
+              style: const ButtonStyle(
+                padding: WidgetStatePropertyAll(
+                  EdgeInsets.symmetric(horizontal: 4),
+                ),
+                textStyle: WidgetStatePropertyAll(TextStyle(fontSize: 13)),
+              ),
               selected: {data.availability},
               onSelectionChanged: (selection) => _updateProvider(
                 data.providerId,
@@ -252,10 +305,9 @@ class _ProviderDashboardScreenState extends State<ProviderDashboardScreen> {
             contentPadding: EdgeInsets.zero,
             title: const Text('Available for emergency calls'),
             value: data.emergencyAvailable,
-            onChanged: (value) => _updateProvider(
-              data.providerId,
-              {'emergency_available': value},
-            ),
+            onChanged: (value) => _updateProvider(data.providerId, {
+              'emergency_available': value,
+            }),
           ),
         ],
       ),
@@ -275,7 +327,9 @@ class _ProviderDashboardScreenState extends State<ProviderDashboardScreen> {
           const Icon(Icons.star, color: Color(0xFFF59E0B), size: 32),
           const SizedBox(width: 10),
           Text(
-            data.ratingCount == 0 ? 'No ratings yet' : data.ratingAvg.toStringAsFixed(1),
+            data.ratingCount == 0
+                ? 'No ratings yet'
+                : data.ratingAvg.toStringAsFixed(1),
             style: GoogleFonts.plusJakartaSans(
               fontSize: 22,
               fontWeight: FontWeight.w700,
@@ -390,6 +444,22 @@ class _ProviderDashboardScreenState extends State<ProviderDashboardScreen> {
               height: 1.4,
             ),
           ),
+          if (r['photo_url'] != null) ...[
+            const SizedBox(height: 10),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Image.network(
+                r['photo_url'] as String,
+                height: 160,
+                width: double.infinity,
+                fit: BoxFit.cover,
+                errorBuilder: (_, _, _) => const SizedBox(
+                  height: 60,
+                  child: Center(child: Text('Photo could not load')),
+                ),
+              ),
+            ),
+          ],
           if (r['preferred_time'] != null) ...[
             const SizedBox(height: 6),
             Text(
@@ -427,6 +497,23 @@ class _ProviderDashboardScreenState extends State<ProviderDashboardScreen> {
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
                 color: AppTheme.secondary,
+              ),
+            ),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              height: 46,
+              child: OutlinedButton.icon(
+                onPressed: () => context.push(
+                  AppRoutes.chatScreen,
+                  extra: {
+                    'requestId': id,
+                    'title': r['category'] as String? ?? 'Chat',
+                    'canSend': true,
+                  },
+                ),
+                icon: const Icon(Icons.chat_bubble_outline),
+                label: const Text('Chat with customer'),
               ),
             ),
             if (next != null) ...[
@@ -481,7 +568,8 @@ class _ProviderDashboardScreenState extends State<ProviderDashboardScreen> {
         child: FutureBuilder<_DashboardData>(
           future: _future,
           builder: (context, snapshot) {
-            if (snapshot.connectionState != ConnectionState.done) {
+            if (snapshot.connectionState != ConnectionState.done &&
+                !snapshot.hasData) {
               return const Center(child: CircularProgressIndicator());
             }
 

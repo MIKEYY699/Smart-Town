@@ -1,8 +1,10 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import 'package:supabase_flutter/supabase_flutter.dart' show Supabase;
+import 'package:supabase_flutter/supabase_flutter.dart'
+    show FileOptions, Supabase;
 
 import '../../theme/app_theme.dart';
 import './widgets/request_category_selector_widget.dart';
@@ -92,13 +94,39 @@ class _CreateServiceRequestScreenState
     setState(() => _isSubmitting = true);
     try {
       final client = Supabase.instance.client;
+      final userId = client.auth.currentUser!.id;
+      final preferredTimeText = _preferredTime?.format(context);
+
+      String? photoPath;
+      if (_attachedMediaPaths.isNotEmpty) {
+        final localPath = _attachedMediaPaths.first;
+        final extension = localPath.split('.').last.toLowerCase();
+        final isPng = extension == 'png';
+        final isWebp = extension == 'webp';
+        final fileExtension = isPng ? 'png' : (isWebp ? 'webp' : 'jpg');
+        final contentType = isPng
+            ? 'image/png'
+            : (isWebp ? 'image/webp' : 'image/jpeg');
+
+        photoPath =
+            '$userId/${DateTime.now().millisecondsSinceEpoch}.$fileExtension';
+        await client.storage
+            .from('request-photos')
+            .upload(
+              photoPath,
+              File(localPath),
+              fileOptions: FileOptions(contentType: contentType),
+            );
+      }
+
       await client.from('service_requests').insert({
-        'customer_id': client.auth.currentUser!.id,
+        'customer_id': userId,
+        'photo_path': photoPath,
         'category': _selectedCategoryName,
         'description': _problemDescription.trim(),
         'urgency': _urgencyLevel.toLowerCase(),
         'preferred_date': _preferredDate?.toIso8601String().split('T').first,
-        'preferred_time': _preferredTime?.format(context),
+        'preferred_time': preferredTimeText,
       });
       if (!mounted) return;
       setState(() => _isSubmitting = false);
@@ -164,7 +192,7 @@ class _CreateServiceRequestScreenState
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: () {
-                  Navigator.of(context).pop();
+                  Navigator.of(context, rootNavigator: true).pop();
                   context.go(AppRoutes.myRequestsScreen);
                 },
                 child: const Text('View My Requests'),
@@ -303,6 +331,8 @@ class _CreateServiceRequestScreenState
                     child: RequestMediaWidget(
                       attachedPaths: _attachedMediaPaths,
                       onMediaAdded: _onMediaAdded,
+                      onMediaRemoved: (path) =>
+                          setState(() => _attachedMediaPaths.remove(path)),
                     ),
                   ),
                   const SizedBox(height: 16),
