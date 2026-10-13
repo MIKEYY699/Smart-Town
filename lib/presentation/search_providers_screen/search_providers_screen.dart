@@ -151,7 +151,11 @@ class _SearchProvidersScreenState extends State<SearchProvidersScreen> {
                   const SizedBox(height: 4),
                   Row(
                     children: [
-                      const Icon(Icons.star, color: Color(0xFFF59E0B), size: 15),
+                      const Icon(
+                        Icons.star,
+                        color: Color(0xFFF59E0B),
+                        size: 15,
+                      ),
                       const SizedBox(width: 3),
                       Text(
                         ratingCount == 0

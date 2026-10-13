@@ -169,6 +169,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   const SizedBox(height: 12),
                 ],
+                if (role == 'admin') ...[
+                  SizedBox(
+                    height: 52,
+                    child: ElevatedButton.icon(
+                      onPressed: () => context.push(AppRoutes.adminScreen),
+                      icon: const Icon(Icons.admin_panel_settings),
+                      label: const Text('Admin panel'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primary,
+                        foregroundColor: Colors.white,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
                 if (role == 'provider') ...[
                   SizedBox(
                     height: 52,

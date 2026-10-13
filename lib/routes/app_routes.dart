@@ -16,6 +16,7 @@ import '../presentation/providers_by_category_screen/providers_by_category_scree
 import '../presentation/search_providers_screen/search_providers_screen.dart';
 import '../presentation/emergency_screen/emergency_screen.dart';
 import '../presentation/chat_screen/chat_screen.dart';
+import '../presentation/admin_screen/admin_screen.dart';
 
 class AppRoutes {
   static const String initial = '/';
@@ -27,6 +28,7 @@ class AppRoutes {
   static const String searchScreen = '/search';
   static const String emergencyScreen = '/emergency';
   static const String chatScreen = '/chat';
+  static const String adminScreen = '/admin';
   static const String customerHomeScreen = '/customer-home-screen';
   static const String providerProfileScreen = '/provider-profile-screen';
   static const String createServiceRequestScreen =
@@ -83,6 +85,10 @@ final GoRouter appRouter = GoRouter(
         );
       },
     ),
+    GoRoute(
+      path: AppRoutes.adminScreen,
+      builder: (context, state) => const AdminScreen(),
+    ),
     StatefulShellRoute.indexedStack(
       builder: (context, state, navigationShell) {
         return AppScaffold(navigationShell: navigationShell);
@@ -116,6 +122,10 @@ final GoRouter appRouter = GoRouter(
         ),
         StatefulShellBranch(
           routes: [
+            GoRoute(
+              path: '/services',
+              builder: (context, state) => const SearchProvidersScreen(),
+            ),
             GoRoute(
               path: AppRoutes.providerProfileScreen,
               builder: (context, state) {
