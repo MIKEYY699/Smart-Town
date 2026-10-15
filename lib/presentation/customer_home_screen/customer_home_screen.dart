@@ -23,10 +23,14 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
   // TODO: Replace with Riverpod/Bloc for production
   String _userName = '';
   String _community = '';
+  late final Stream<List<Map<String, dynamic>>> _notificationStream;
 
   @override
   void initState() {
     super.initState();
+    _notificationStream = Supabase.instance.client
+        .from('notifications')
+        .stream(primaryKey: ['id']);
     _loadProfile();
   }
 
@@ -72,7 +76,6 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
   void _onEmergencyTap() {
     context.push(AppRoutes.emergencyScreen);
   }
-  
 
   @override
   Widget build(BuildContext context) {
@@ -85,11 +88,21 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
         child: CustomScrollView(
           slivers: [
             SliverToBoxAdapter(
-              child: HomeAppBarWidget(
-                userName: _userName,
-                community: _community,
-                onNotificationTap: () {},
-                onAvatarTap: () {},
+              child: StreamBuilder<List<Map<String, dynamic>>>(
+                stream: _notificationStream,
+                builder: (context, snapshot) {
+                  final unread = (snapshot.data ?? [])
+                      .where((n) => n['read_at'] == null)
+                      .length;
+                  return HomeAppBarWidget(
+                    userName: _userName,
+                    community: _community,
+                    unreadCount: unread,
+                    onNotificationTap: () =>
+                        context.push(AppRoutes.notificationsScreen),
+                    onAvatarTap: () {},
+                  );
+                },
               ),
             ),
             SliverToBoxAdapter(

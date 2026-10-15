@@ -59,6 +59,83 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  Future<void> _editName(String currentName) async {
+    final newName = await showDialog<String>(
+      context: context,
+      builder: (_) => _NameDialog(initialName: currentName),
+    );
+    if (newName == null || newName == currentName || !mounted) return;
+
+    try {
+      final client = Supabase.instance.client;
+      final userId = client.auth.currentUser!.id;
+      await client
+          .from('profiles')
+          .update({'full_name': newName})
+          .eq('id', userId);
+      // Providers show their name on their listing too.
+      await client
+          .from('providers')
+          .update({'full_name': newName})
+          .eq('user_id', userId);
+      if (!mounted) return;
+      setState(() {
+        _future = _load();
+      });
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not save your name. Try again.')),
+      );
+    }
+  }
+
+  Future<void> _deleteAccount() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Delete your account?'),
+        content: const Text(
+          'This permanently deletes your account, requests and messages. '
+          'It cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text(
+              'Delete',
+              style: TextStyle(color: AppTheme.error),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    try {
+      final client = Supabase.instance.client;
+      await client.rpc('delete_my_account');
+      try {
+        await client.auth.signOut();
+      } catch (_) {
+        // The account is already gone, so signing out can fail. That is fine.
+      }
+      if (!mounted) return;
+      context.go(AppRoutes.authScreen);
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Could not delete your account. Try again.'),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final email = Supabase.instance.client.auth.currentUser?.email ?? '';
@@ -203,6 +280,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 SizedBox(
                   height: 52,
                   child: OutlinedButton.icon(
+                    onPressed: () => _editName(name),
+                    icon: const Icon(Icons.edit_outlined),
+                    label: const Text('Edit name'),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  height: 52,
+                  child: OutlinedButton.icon(
                     onPressed: _isLoggingOut ? null : _logOut,
                     icon: const Icon(Icons.logout),
                     label: Text(_isLoggingOut ? 'Logging out...' : 'Log out'),
@@ -212,11 +298,79 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                   ),
                 ),
+                const SizedBox(height: 8),
+                TextButton(
+                  onPressed: _deleteAccount,
+                  child: const Text(
+                    'Delete my account',
+                    style: TextStyle(color: Color(0xFF9E9E9E)),
+                  ),
+                ),
               ],
             );
           },
         ),
       ),
+    );
+  }
+}
+
+/// Asks for a new name. It owns its own text controller.
+class _NameDialog extends StatefulWidget {
+  final String initialName;
+
+  const _NameDialog({required this.initialName});
+
+  @override
+  State<_NameDialog> createState() => _NameDialogState();
+}
+
+class _NameDialogState extends State<_NameDialog> {
+  late final TextEditingController _controller;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.initialName);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _save() {
+    final name = _controller.text.trim();
+    if (name.length < 2) {
+      setState(() => _error = 'Enter your name');
+      return;
+    }
+    FocusScope.of(context).unfocus();
+    Navigator.of(context).pop(name);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Edit your name'),
+      content: TextField(
+        controller: _controller,
+        maxLength: 60,
+        textCapitalization: TextCapitalization.words,
+        decoration: InputDecoration(
+          border: const OutlineInputBorder(),
+          errorText: _error,
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(onPressed: _save, child: const Text('Save')),
+      ],
     );
   }
 }

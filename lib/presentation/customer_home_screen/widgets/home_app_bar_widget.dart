@@ -4,17 +4,20 @@ import '../../../theme/app_theme.dart';
 import '../../../widgets/custom_icon_widget.dart';
 import '../../../widgets/custom_image_widget.dart';
 
+
 class HomeAppBarWidget extends StatelessWidget {
   final String userName;
   final String community;
   final VoidCallback onNotificationTap;
   final VoidCallback onAvatarTap;
+  final int unreadCount;
 
   const HomeAppBarWidget({
     required this.userName,
     required this.community,
     required this.onNotificationTap,
     required this.onAvatarTap,
+    this.unreadCount = 0,
     super.key,
   });
 
@@ -81,18 +84,30 @@ class HomeAppBarWidget extends StatelessWidget {
                     size: 22,
                   ),
                 ),
-                Positioned(
-                  top: 8,
-                  right: 8,
-                  child: Container(
-                    width: 8,
-                    height: 8,
-                    decoration: const BoxDecoration(
-                      color: AppTheme.primary,
-                      shape: BoxShape.circle,
+                if (unreadCount > 0)
+                  Positioned(
+                    top: 2,
+                    right: 2,
+                    child: Container(
+                      constraints: const BoxConstraints(minWidth: 16),
+                      height: 16,
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primary,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Center(
+                        child: Text(
+                          unreadCount > 9 ? '9+' : '$unreadCount',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
                     ),
                   ),
-                ),
               ],
             ),
           ),
