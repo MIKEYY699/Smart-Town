@@ -9,7 +9,7 @@ import './widgets/home_app_bar_widget.dart';
 import './widgets/home_search_bar_widget.dart';
 import './widgets/home_tagline_widget.dart';
 import './widgets/nearby_providers_widget.dart';
-import './widgets/specialty_scroll_widget.dart';
+
 import 'package:supabase_flutter/supabase_flutter.dart' show Supabase;
 
 class CustomerHomeScreen extends StatefulWidget {
@@ -143,12 +143,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                 child: NearbyProvidersWidget(onProviderTap: _onProviderTap),
               ),
             ),
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(0, 24, 0, 0),
-                child: SpecialtyScrollWidget(onProviderTap: _onProviderTap),
-              ),
-            ),
+
             const SliverToBoxAdapter(child: SizedBox(height: 120)),
           ],
         ),

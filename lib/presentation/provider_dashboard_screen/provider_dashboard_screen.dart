@@ -7,10 +7,6 @@ import 'package:supabase_flutter/supabase_flutter.dart'
 import '../../routes/app_routes.dart';
 import '../../theme/app_theme.dart';
 
-
-
-
-
 class _DashboardData {
   final String providerId;
   final String verification;
@@ -82,6 +78,12 @@ class _ProviderDashboardScreenState extends State<ProviderDashboardScreen> {
   Future<_DashboardData> _load() async {
     final client = Supabase.instance.client;
     final userId = client.auth.currentUser!.id;
+
+    try {
+      await client.rpc('expire_old_requests');
+    } catch (_) {
+      // Not critical. The list still loads.
+    }
 
     final provider = await client
         .from('providers')
@@ -186,6 +188,15 @@ class _ProviderDashboardScreenState extends State<ProviderDashboardScreen> {
     return _run(requestId, () async {
       await Supabase.instance.client.rpc(
         'accept_request',
+        params: {'request_id': requestId},
+      );
+    });
+  }
+
+  Future<void> _decline(String requestId) {
+    return _run(requestId, () async {
+      await Supabase.instance.client.rpc(
+        'decline_request',
         params: {'request_id': requestId},
       );
     });
@@ -476,23 +487,38 @@ class _ProviderDashboardScreenState extends State<ProviderDashboardScreen> {
           ],
           const SizedBox(height: 12),
           if (!isJob)
-            SizedBox(
-              width: double.infinity,
-              height: 46,
-              child: ElevatedButton(
-                onPressed: busy ? null : () => _accept(id),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.primary,
-                  foregroundColor: Colors.white,
+            Row(
+              children: [
+                Expanded(
+                  child: SizedBox(
+                    height: 46,
+                    child: ElevatedButton(
+                      onPressed: busy ? null : () => _accept(id),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primary,
+                        foregroundColor: Colors.white,
+                      ),
+                      child: busy
+                          ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Text('Accept'),
+                    ),
+                  ),
                 ),
-                child: busy
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Text('Accept request'),
-              ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: SizedBox(
+                    height: 46,
+                    child: OutlinedButton(
+                      onPressed: busy ? null : () => _decline(id),
+                      child: const Text('Decline'),
+                    ),
+                  ),
+                ),
+              ],
             )
           else ...[
             Text(

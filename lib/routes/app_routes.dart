@@ -151,7 +151,14 @@ final GoRouter appRouter = GoRouter(
             ),
             GoRoute(
               path: AppRoutes.createServiceRequestScreen,
-              builder: (context, state) => const CreateServiceRequestScreen(),
+              builder: (context, state) {
+                final args = state.extra as Map<String, dynamic>?;
+                return CreateServiceRequestScreen(
+                  targetProviderId: args?['providerId'] as String?,
+                  targetProviderName: args?['providerName'] as String?,
+                  presetCategory: args?['category'] as String?,
+                );            
+              },
             ),
           ],
         ),

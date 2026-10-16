@@ -1,11 +1,13 @@
 import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-
 import 'package:supabase_flutter/supabase_flutter.dart'
     show FileOptions, Supabase;
 
+import '../../core/service_classifier.dart';
+import '../../routes/app_routes.dart';
 import '../../theme/app_theme.dart';
 import './widgets/request_category_selector_widget.dart';
 import './widgets/request_location_widget.dart';
@@ -13,10 +15,19 @@ import './widgets/request_media_widget.dart';
 import './widgets/request_problem_widget.dart';
 import './widgets/request_schedule_widget.dart';
 import './widgets/request_urgency_widget.dart';
-import '../../routes/app_routes.dart';
 
 class CreateServiceRequestScreen extends StatefulWidget {
-  const CreateServiceRequestScreen({super.key});
+  /// Set when the customer comes from a provider's profile.
+  final String? targetProviderId;
+  final String? targetProviderName;
+  final String? presetCategory;
+
+  const CreateServiceRequestScreen({
+    this.targetProviderId,
+    this.targetProviderName,
+    this.presetCategory,
+    super.key,
+  });
 
   @override
   State<CreateServiceRequestScreen> createState() =>
@@ -36,6 +47,38 @@ class _CreateServiceRequestScreenState
   final List<String> _attachedMediaPaths = [];
   bool _isSubmitting = false;
   String? _aiClassificationHint;
+  ServiceGuess? _guess;
+  bool _sendToChosen = true;
+
+  static const Map<String, String> _categoryIds = {
+    'Plumbing': 'plumbing',
+    'Electrical': 'electrical',
+    'AC Repair': 'ac_repair',
+    'Carpentry': 'carpentry',
+    'Painting': 'painting',
+    'Cleaning': 'cleaning',
+    'Locksmith': 'locksmith',
+    'Appliance': 'appliance',
+    'Mobile Repair': 'mobile_repair',
+    'Tutor': 'tutor',
+    'Masonry': 'mason',
+  };
+
+  @override
+  void initState() {
+    super.initState();
+    final preset = widget.presetCategory;
+    if (preset != null && _categoryIds.containsKey(preset)) {
+      _selectedCategoryName = preset;
+      _selectedCategoryId = _categoryIds[preset];
+    }
+  }
+
+  /// True when this request goes to one chosen provider only.
+  bool get _hasTarget =>
+      widget.targetProviderId != null &&
+      _sendToChosen &&
+      _selectedCategoryName == widget.presetCategory;
 
   void _onCategorySelected(String id, String name) {
     setState(() {
@@ -45,24 +88,34 @@ class _CreateServiceRequestScreenState
   }
 
   void _onDescriptionChanged(String text) {
+    final guess = ServiceClassifier.classify(text);
     setState(() {
       _problemDescription = text;
-      // Simulate AI classification hint
-      if (text.toLowerCase().contains('nal') ||
-          text.toLowerCase().contains('pipe') ||
-          text.toLowerCase().contains('leak')) {
-        _aiClassificationHint = '🤖 Detected: Plumbing → Pipe/Faucet Leakage';
-      } else if (text.toLowerCase().contains('ac') ||
-          text.toLowerCase().contains('thanda')) {
-        _aiClassificationHint = '🤖 Detected: AC Technician → Cooling Issue';
-      } else if (text.toLowerCase().contains('bijli') ||
-          text.toLowerCase().contains('electric')) {
-        _aiClassificationHint = '🤖 Detected: Electrical → Power/Wiring Issue';
-      } else if (text.length > 10) {
-        _aiClassificationHint = null;
+      _guess = guess;
+      if (guess != null) {
+        final urgencyText =
+            guess.urgency == null ? '' : '  •  ${guess.urgency}';
+        _aiClassificationHint =
+            'Looks like ${guess.categoryName}$urgencyText. Tap here to use this.';
+      } else if (text.trim().length >= 15) {
+        _aiClassificationHint =
+            'We are not sure which service you need. Please select a category.';
       } else {
         _aiClassificationHint = null;
       }
+    });
+  }
+
+  void _applyGuess() {
+    final guess = _guess;
+    if (guess == null) return;
+    setState(() {
+      _selectedCategoryId = guess.categoryId;
+      _selectedCategoryName = guess.categoryName;
+      if (guess.urgency != null) {
+        _urgencyLevel = guess.urgency!;
+      }
+      _aiClassificationHint = null;
     });
   }
 
@@ -122,6 +175,7 @@ class _CreateServiceRequestScreenState
       await client.from('service_requests').insert({
         'customer_id': userId,
         'photo_path': photoPath,
+        'target_provider_id': _hasTarget ? widget.targetProviderId : null,
         'category': _selectedCategoryName,
         'description': _problemDescription.trim(),
         'urgency': _urgencyLevel.toLowerCase(),
@@ -147,6 +201,9 @@ class _CreateServiceRequestScreenState
   }
 
   void _showSuccessDialog() {
+    final message = _hasTarget
+        ? 'Your request was sent to ${widget.targetProviderName ?? 'the provider'}. You will be notified when they reply.'
+        : 'Your service request has been submitted. Nearby providers will respond shortly.';
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -179,7 +236,7 @@ class _CreateServiceRequestScreenState
             ),
             const SizedBox(height: 8),
             Text(
-              'Your service request has been submitted. Nearby providers will respond shortly.',
+              message,
               style: GoogleFonts.plusJakartaSans(
                 fontSize: 13,
                 color: const Color(0xFF5C5C5C),
@@ -221,7 +278,13 @@ class _CreateServiceRequestScreenState
             color: Color(0xFF1A1A1A),
             size: 20,
           ),
-          onPressed: () => context.go(AppRoutes.myRequestsScreen),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go(AppRoutes.myRequestsScreen);
+            }
+          },
         ),
         title: Text(
           'New Service Request',
@@ -273,7 +336,21 @@ class _CreateServiceRequestScreenState
                 delegate: SliverChildListDelegate([
                   // AI Classification hint banner
                   if (_aiClassificationHint != null) ...[
-                    _AiHintBanner(hint: _aiClassificationHint!),
+                    GestureDetector(
+                      onTap: _applyGuess,
+                      child: _AiHintBanner(hint: _aiClassificationHint!),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+
+                  if (widget.targetProviderId != null &&
+                      _selectedCategoryName == widget.presetCategory) ...[
+                    _TargetProviderCard(
+                      name: widget.targetProviderName ?? 'this provider',
+                      sendToChosen: _sendToChosen,
+                      onChanged: (value) =>
+                          setState(() => _sendToChosen = value),
+                    ),
                     const SizedBox(height: 16),
                   ],
 
@@ -534,5 +611,60 @@ class _SectionCard extends StatelessWidget {
       default:
         return Icons.info_outline;
     }
+  }
+}
+
+class _TargetProviderCard extends StatelessWidget {
+  final String name;
+  final bool sendToChosen;
+  final ValueChanged<bool> onChanged;
+
+  const _TargetProviderCard({
+    required this.name,
+    required this.sendToChosen,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.primary.withAlpha(60)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.person_pin_circle, color: AppTheme.primary),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Send to $name only',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  sendToChosen
+                      ? 'Only $name will see this request.'
+                      : 'Any provider in this category can respond.',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 12,
+                    color: const Color(0xFF5C5C5C),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Switch(value: sendToChosen, onChanged: onChanged),
+        ],
+      ),
+    );
   }
 }

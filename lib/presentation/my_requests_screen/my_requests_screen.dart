@@ -49,6 +49,12 @@ class _MyRequestsScreenState extends State<MyRequestsScreen> {
     final client = Supabase.instance.client;
     final userId = client.auth.currentUser!.id;
 
+    try {
+      await client.rpc('expire_old_requests');
+    } catch (_) {
+      // Not critical. The list still loads.
+    }
+
     final rows = await client
         .from('service_requests')
         .select('id, category, description, urgency, status, created_at')
@@ -147,6 +153,7 @@ class _MyRequestsScreenState extends State<MyRequestsScreen> {
         return AppTheme.success;
       case 'cancelled':
       case 'rejected':
+      case 'expired':
         return AppTheme.error;
       default:
         return AppTheme.warning;

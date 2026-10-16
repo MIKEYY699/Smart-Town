@@ -40,7 +40,7 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen> {
         .select(
           'id, full_name, description, experience_years, verification, '
           'availability, emergency_available, rating_avg, rating_count, '
-          'professions(name)',
+          'professions(name, category)',
         )
         .eq('id', widget.providerId)
         .maybeSingle();
@@ -200,6 +200,9 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen> {
             final profession = professionData is Map
                 ? (professionData['name'] as String? ?? '')
                 : '';
+            final category = professionData is Map
+                ? (professionData['category'] as String? ?? '')
+                : '';
             final verified = p['verification'] == 'verified';
             final availability = p['availability'] as String? ?? 'offline';
             final ratingCount = (p['rating_count'] as num?)?.toInt() ?? 0;
@@ -268,7 +271,9 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen> {
                             vertical: 4,
                           ),
                           decoration: BoxDecoration(
-                            color: _availabilityColor(availability).withAlpha(30),
+                            color: _availabilityColor(
+                              availability,
+                            ).withAlpha(30),
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Text(
@@ -333,8 +338,14 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen> {
                     width: double.infinity,
                     height: 52,
                     child: ElevatedButton(
-                      onPressed: () =>
-                          context.push(AppRoutes.createServiceRequestScreen),
+                      onPressed: () => context.push(
+                        AppRoutes.createServiceRequestScreen,
+                        extra: {
+                          'providerId': p['id'],
+                          'providerName': name,
+                          'category': category,
+                        },
+                      ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppTheme.primary,
                         foregroundColor: Colors.white,
