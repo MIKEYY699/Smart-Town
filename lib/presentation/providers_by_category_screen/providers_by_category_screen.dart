@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart' show Supabase;
 
 import '../../routes/app_routes.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/avatar_widget.dart';
 
 /// Lists the providers for one category, for example "Plumbing".
 class ProvidersByCategoryScreen extends StatefulWidget {
@@ -30,7 +31,7 @@ class _ProvidersByCategoryScreenState extends State<ProvidersByCategoryScreen> {
     final rows = await Supabase.instance.client
         .from('providers')
         .select(
-          'id, full_name, verification, availability, rating_avg, '
+          'id, full_name, photo_url, verification, availability, rating_avg, '
           'rating_count, professions!inner(name, category)',
         )
         .eq('professions.category', widget.category)
@@ -65,8 +66,10 @@ class _ProvidersByCategoryScreenState extends State<ProvidersByCategoryScreen> {
     final ratingAvg = (p['rating_avg'] as num?)?.toDouble() ?? 0;
 
     return GestureDetector(
-      onTap: () =>
-          context.push(AppRoutes.providerProfileScreen, extra: p['id'] as String),
+      onTap: () => context.push(
+        AppRoutes.providerProfileScreen,
+        extra: p['id'] as String,
+      ),
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(14),
@@ -83,17 +86,10 @@ class _ProvidersByCategoryScreenState extends State<ProvidersByCategoryScreen> {
         ),
         child: Row(
           children: [
-            CircleAvatar(
+            AvatarWidget(
+              name: name,
+              imageUrl: p['photo_url'] as String?,
               radius: 28,
-              backgroundColor: AppTheme.primaryContainer,
-              child: Text(
-                name.isNotEmpty ? name[0].toUpperCase() : '?',
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w700,
-                  color: AppTheme.primary,
-                ),
-              ),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -125,7 +121,11 @@ class _ProvidersByCategoryScreenState extends State<ProvidersByCategoryScreen> {
                   const SizedBox(height: 4),
                   Row(
                     children: [
-                      const Icon(Icons.star, color: Color(0xFFF59E0B), size: 15),
+                      const Icon(
+                        Icons.star,
+                        color: Color(0xFFF59E0B),
+                        size: 15,
+                      ),
                       const SizedBox(width: 3),
                       Text(
                         ratingCount == 0

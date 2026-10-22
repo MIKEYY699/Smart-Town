@@ -9,6 +9,8 @@ import './widgets/home_app_bar_widget.dart';
 import './widgets/home_search_bar_widget.dart';
 import './widgets/home_tagline_widget.dart';
 import './widgets/nearby_providers_widget.dart';
+import '../../widgets/app_drawer.dart';
+import '../../widgets/avatar_widget.dart';
 
 import 'package:supabase_flutter/supabase_flutter.dart' show Supabase;
 
@@ -23,6 +25,8 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
   // TODO: Replace with Riverpod/Bloc for production
   String _userName = '';
   String _community = '';
+  String? _avatarUrl;
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   late final Stream<List<Map<String, dynamic>>> _notificationStream;
 
   @override
@@ -31,7 +35,15 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
     _notificationStream = Supabase.instance.client
         .from('notifications')
         .stream(primaryKey: ['id']);
+
     _loadProfile();
+    profileChangedNotifier.addListener(_loadProfile);
+  }
+
+  @override
+  void dispose() {
+    profileChangedNotifier.removeListener(_loadProfile);
+    super.dispose();
   }
 
   Future<void> _loadProfile() async {
@@ -39,7 +51,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
       final client = Supabase.instance.client;
       final row = await client
           .from('profiles')
-          .select('full_name, communities(name, city)')
+          .select('full_name, avatar_url, communities(name, city)')
           .eq('id', client.auth.currentUser!.id)
           .single();
 
@@ -48,6 +60,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
 
       if (!mounted) return;
       setState(() {
+        _avatarUrl = row['avatar_url'] as String?;
         _userName = fullName.split(' ').first;
         _community = communityData is Map
             ? '${communityData['name']}, ${communityData['city']}'
@@ -82,6 +95,8 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
     final isTablet = MediaQuery.of(context).size.width >= 600;
 
     return Scaffold(
+      key: _scaffoldKey,
+      drawer: const AppDrawer(),
       backgroundColor: AppTheme.backgroundLight,
       body: SafeArea(
         bottom: false,
@@ -98,9 +113,11 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                     userName: _userName,
                     community: _community,
                     unreadCount: unread,
+                    avatarUrl: _avatarUrl,
+                    onMenuTap: () => _scaffoldKey.currentState?.openDrawer(),
                     onNotificationTap: () =>
                         context.push(AppRoutes.notificationsScreen),
-                    onAvatarTap: () {},
+                    onAvatarTap: () => context.go('/profile'),
                   );
                 },
               ),

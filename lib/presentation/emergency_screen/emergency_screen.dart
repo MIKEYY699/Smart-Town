@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart' show Supabase;
 
 import '../../routes/app_routes.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/avatar_widget.dart';
 
 /// Verified providers who are available for emergency calls right now.
 class EmergencyScreen extends StatefulWidget {
@@ -27,7 +28,7 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
     final rows = await Supabase.instance.client
         .from('providers')
         .select(
-          'id, full_name, availability, rating_avg, rating_count, '
+          'id, full_name, photo_url, availability, rating_avg, rating_count, '
           'professions(name)',
         )
         .eq('emergency_available', true)
@@ -76,17 +77,10 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
         ),
         child: Row(
           children: [
-            CircleAvatar(
+            AvatarWidget(
+              name: name,
+              imageUrl: p['photo_url'] as String?,
               radius: 28,
-              backgroundColor: AppTheme.primaryContainer,
-              child: Text(
-                name.isNotEmpty ? name[0].toUpperCase() : '?',
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w700,
-                  color: AppTheme.primary,
-                ),
-              ),
             ),
             const SizedBox(width: 14),
             Expanded(

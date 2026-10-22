@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart' show Supabase;
 
 import '../../routes/app_routes.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/avatar_widget.dart';
 
 /// Search providers by name or profession.
 class SearchProvidersScreen extends StatefulWidget {
@@ -40,7 +41,7 @@ class _SearchProvidersScreenState extends State<SearchProvidersScreen> {
     final rows = await Supabase.instance.client
         .from('providers')
         .select(
-          'id, full_name, verification, availability, rating_avg, '
+          'id, full_name, photo_url, verification, availability, rating_avg, '
           'rating_count, professions(name)',
         )
         .order('rating_avg', ascending: false);
@@ -101,17 +102,10 @@ class _SearchProvidersScreenState extends State<SearchProvidersScreen> {
         ),
         child: Row(
           children: [
-            CircleAvatar(
+            AvatarWidget(
+              name: name,
+              imageUrl: p['photo_url'] as String?,
               radius: 28,
-              backgroundColor: AppTheme.primaryContainer,
-              child: Text(
-                name.isNotEmpty ? name[0].toUpperCase() : '?',
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w700,
-                  color: AppTheme.primary,
-                ),
-              ),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -189,13 +183,15 @@ class _SearchProvidersScreenState extends State<SearchProvidersScreen> {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
-        ),
+        automaticallyImplyLeading: false,
+        leading: context.canPop()
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () => context.pop(),
+              )
+            : null,
         title: TextField(
           controller: _controller,
-          autofocus: widget.initialQuery.isEmpty,
           onChanged: (value) => setState(() => _query = value.trim()),
           decoration: const InputDecoration(
             hintText: 'Search name or profession',

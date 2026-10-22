@@ -1,23 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../../theme/app_theme.dart';
-import '../../../widgets/custom_icon_widget.dart';
-import '../../../widgets/custom_image_widget.dart';
 
+import '../../../theme/app_theme.dart';
+import '../../../widgets/avatar_widget.dart';
+import '../../../widgets/custom_icon_widget.dart';
 
 class HomeAppBarWidget extends StatelessWidget {
   final String userName;
   final String community;
   final VoidCallback onNotificationTap;
   final VoidCallback onAvatarTap;
+  final VoidCallback? onMenuTap;
   final int unreadCount;
+  final String? avatarUrl;
 
   const HomeAppBarWidget({
     required this.userName,
     required this.community,
     required this.onNotificationTap,
     required this.onAvatarTap,
+    this.onMenuTap,
     this.unreadCount = 0,
+    this.avatarUrl,
     super.key,
   });
 
@@ -28,18 +32,17 @@ class HomeAppBarWidget extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
       child: Row(
         children: [
-          // Logo/grid icon
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: AppTheme.primaryMuted,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: CustomIconWidget(
-              iconName: 'grid_view',
-              color: AppTheme.primary,
-              size: 22,
+          // Side menu button
+          GestureDetector(
+            onTap: onMenuTap,
+            child: Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: AppTheme.primaryMuted,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(Icons.menu, color: AppTheme.primary, size: 24),
             ),
           ),
           const SizedBox(width: 12),
@@ -56,7 +59,9 @@ class HomeAppBarWidget extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  userName,
+                  userName.isEmpty ? ' ' : userName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
@@ -112,26 +117,19 @@ class HomeAppBarWidget extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 10),
-          // Avatar
+          // The user's own profile photo
           GestureDetector(
             onTap: onAvatarTap,
             child: Container(
-              width: 44,
-              height: 44,
+              padding: const EdgeInsets.all(2),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(color: AppTheme.primary, width: 2),
               ),
-              child: ClipOval(
-                child: CustomImageWidget(
-                  imageUrl:
-                      'https://images.pexels.com/photos/1681010/pexels-photo-1681010.jpeg',
-                  width: 44,
-                  height: 44,
-                  fit: BoxFit.cover,
-                  semanticLabel:
-                      'Profile photo of Adnan, a man with short dark hair',
-                ),
+              child: AvatarWidget(
+                name: userName,
+                imageUrl: avatarUrl,
+                radius: 18,
               ),
             ),
           ),

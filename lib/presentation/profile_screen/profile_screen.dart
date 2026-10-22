@@ -1,10 +1,15 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:supabase_flutter/supabase_flutter.dart' show Supabase;
+import 'package:image_picker/image_picker.dart';
+import 'package:supabase_flutter/supabase_flutter.dart'
+    show FileOptions, Supabase;
 
 import '../../routes/app_routes.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/avatar_widget.dart';
 
 /// Shows the logged-in user's details and a Log out button.
 class ProfileScreen extends StatefulWidget {
@@ -17,6 +22,7 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   late Future<Map<String, dynamic>> _future;
   bool _isLoggingOut = false;
+  bool _uploadingPhoto = false;
 
   @override
   void initState() {
@@ -29,7 +35,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final userId = client.auth.currentUser!.id;
     final row = await client
         .from('profiles')
-        .select('full_name, role')
+        .select('full_name, role, avatar_url')
         .eq('id', userId)
         .single();
     return Map<String, dynamic>.from(row);
@@ -59,6 +65,72 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  Future<void> _changePhoto() async {
+    if (_uploadingPhoto) return;
+    try {
+      final picked = await ImagePicker().pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 800,
+        imageQuality: 80,
+      );
+      if (picked == null) return;
+
+      setState(() {
+        _uploadingPhoto = true;
+      });
+
+      final client = Supabase.instance.client;
+      final userId = client.auth.currentUser!.id;
+      final extension = picked.path.split('.').last.toLowerCase();
+      final isPng = extension == 'png';
+      final isWebp = extension == 'webp';
+      final fileExtension = isPng ? 'png' : (isWebp ? 'webp' : 'jpg');
+      final contentType = isPng
+          ? 'image/png'
+          : (isWebp ? 'image/webp' : 'image/jpeg');
+
+      final path =
+          '$userId/avatar_${DateTime.now().millisecondsSinceEpoch}.$fileExtension';
+      await client.storage
+          .from('avatars')
+          .upload(
+            path,
+            File(picked.path),
+            fileOptions: FileOptions(contentType: contentType),
+          );
+      final url = client.storage.from('avatars').getPublicUrl(path);
+
+      await client
+          .from('profiles')
+          .update({'avatar_url': url})
+          .eq('id', userId);
+      // Providers show the same photo on their listing.
+      await client
+          .from('providers')
+          .update({'photo_url': url})
+          .eq('user_id', userId);
+
+      profileChangedNotifier.value++;
+      if (!mounted) return;
+      setState(() {
+        _future = _load();
+      });
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Could not upload your photo. Try again.'),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _uploadingPhoto = false;
+        });
+      }
+    }
+  }
+
   Future<void> _editName(String currentName) async {
     final newName = await showDialog<String>(
       context: context,
@@ -78,6 +150,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           .from('providers')
           .update({'full_name': newName})
           .eq('user_id', userId);
+      profileChangedNotifier.value++;
       if (!mounted) return;
       setState(() {
         _future = _load();
@@ -171,22 +244,42 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
             final name = (snapshot.data?['full_name'] as String?) ?? '';
             final role = (snapshot.data?['role'] as String?) ?? 'customer';
-            final initial = name.isNotEmpty ? name[0].toUpperCase() : '?';
+            final avatarUrl = snapshot.data?['avatar_url'] as String?;
 
             return ListView(
               padding: const EdgeInsets.fromLTRB(20, 24, 20, 100),
               children: [
                 Center(
-                  child: CircleAvatar(
-                    radius: 44,
-                    backgroundColor: AppTheme.primaryContainer,
-                    child: Text(
-                      initial,
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 36,
-                        fontWeight: FontWeight.w700,
-                        color: AppTheme.primary,
-                      ),
+                  child: GestureDetector(
+                    onTap: _changePhoto,
+                    child: Stack(
+                      children: [
+                        AvatarWidget(
+                          name: name,
+                          imageUrl: avatarUrl,
+                          radius: 48,
+                        ),
+                        if (_uploadingPhoto)
+                          const Positioned.fill(
+                            child: Center(child: CircularProgressIndicator()),
+                          ),
+                        Positioned(
+                          right: 0,
+                          bottom: 0,
+                          child: Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: const BoxDecoration(
+                              color: AppTheme.primary,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.camera_alt,
+                              color: Colors.white,
+                              size: 16,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),

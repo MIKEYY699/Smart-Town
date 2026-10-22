@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart' show Supabase;
 
 import '../../routes/app_routes.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/avatar_widget.dart';
 
 class _ProfileData {
   final Map<String, dynamic> provider;
@@ -38,7 +39,7 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen> {
     final provider = await client
         .from('providers')
         .select(
-          'id, full_name, description, experience_years, verification, '
+          'id, full_name, photo_url, description, experience_years, verification, '
           'availability, emergency_available, rating_avg, rating_count, '
           'professions(name, category)',
         )
@@ -218,17 +219,10 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen> {
                     padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
                     children: [
                       Center(
-                        child: CircleAvatar(
-                          radius: 44,
-                          backgroundColor: AppTheme.primaryContainer,
-                          child: Text(
-                            name.isNotEmpty ? name[0].toUpperCase() : '?',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 36,
-                              fontWeight: FontWeight.w700,
-                              color: AppTheme.primary,
-                            ),
-                          ),
+                        child: AvatarWidget(
+                          name: name,
+                          imageUrl: p['photo_url'] as String?,
+                          radius: 48,
                         ),
                       ),
                       const SizedBox(height: 14),
