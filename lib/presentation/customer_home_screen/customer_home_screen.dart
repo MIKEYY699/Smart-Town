@@ -135,7 +135,8 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                   onChanged: _onSearchChanged,
                   onSubmitted: (query) =>
                       context.push(AppRoutes.searchScreen, extra: query.trim()),
-                  onFilterTap: () {},
+                  onFilterTap: () =>
+                      context.push(AppRoutes.searchScreen, extra: ''),
                 ),
               ),
             ),

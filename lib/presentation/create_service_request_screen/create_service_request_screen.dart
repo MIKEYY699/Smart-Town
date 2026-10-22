@@ -49,6 +49,7 @@ class _CreateServiceRequestScreenState
   String? _aiClassificationHint;
   ServiceGuess? _guess;
   bool _sendToChosen = true;
+  String _locationNote = '';
 
   static const Map<String, String> _categoryIds = {
     'Plumbing': 'plumbing',
@@ -93,8 +94,9 @@ class _CreateServiceRequestScreenState
       _problemDescription = text;
       _guess = guess;
       if (guess != null) {
-        final urgencyText =
-            guess.urgency == null ? '' : '  •  ${guess.urgency}';
+        final urgencyText = guess.urgency == null
+            ? ''
+            : '  •  ${guess.urgency}';
         _aiClassificationHint =
             'Looks like ${guess.categoryName}$urgencyText. Tap here to use this.';
       } else if (text.trim().length >= 15) {
@@ -172,16 +174,44 @@ class _CreateServiceRequestScreenState
             );
       }
 
-      await client.from('service_requests').insert({
-        'customer_id': userId,
-        'photo_path': photoPath,
-        'target_provider_id': _hasTarget ? widget.targetProviderId : null,
-        'category': _selectedCategoryName,
-        'description': _problemDescription.trim(),
-        'urgency': _urgencyLevel.toLowerCase(),
-        'preferred_date': _preferredDate?.toIso8601String().split('T').first,
-        'preferred_time': preferredTimeText,
-      });
+      final inserted = await client
+          .from('service_requests')
+          .insert({
+            'customer_id': userId,
+            'photo_path': photoPath,
+            'target_provider_id': _hasTarget ? widget.targetProviderId : null,
+            'category': _selectedCategoryName,
+            'description': _problemDescription.trim(),
+            'urgency': _urgencyLevel.toLowerCase(),
+            'preferred_date': _preferredDate
+                ?.toIso8601String()
+                .split('T')
+                .first,
+            'preferred_time': preferredTimeText,
+          })
+          .select('id')
+          .single();
+
+      // The address note is private, so it lives in its own table.
+      final note = _locationNote.trim();
+      if (note.isNotEmpty) {
+        try {
+          await client.from('request_locations').insert({
+            'request_id': inserted['id'],
+            'note': note,
+          });
+        } catch (_) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text(
+                  'Request sent, but your address note could not be saved.',
+                ),
+              ),
+            );
+          }
+        }
+      }
       if (!mounted) return;
       setState(() => _isSubmitting = false);
       _showSuccessDialog();
@@ -334,25 +364,34 @@ class _CreateServiceRequestScreenState
               ),
               sliver: SliverList(
                 delegate: SliverChildListDelegate([
+                  // These two slots always exist (empty when hidden). If they
+                  // came and went, every section below would shift position
+                  // and the text box would lose focus while the user types.
                   // AI Classification hint banner
-                  if (_aiClassificationHint != null) ...[
-                    GestureDetector(
-                      onTap: _applyGuess,
-                      child: _AiHintBanner(hint: _aiClassificationHint!),
-                    ),
-                    const SizedBox(height: 16),
-                  ],
+                  if (_aiClassificationHint != null)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: GestureDetector(
+                        onTap: _applyGuess,
+                        child: _AiHintBanner(hint: _aiClassificationHint!),
+                      ),
+                    )
+                  else
+                    const SizedBox.shrink(),
 
                   if (widget.targetProviderId != null &&
-                      _selectedCategoryName == widget.presetCategory) ...[
-                    _TargetProviderCard(
-                      name: widget.targetProviderName ?? 'this provider',
-                      sendToChosen: _sendToChosen,
-                      onChanged: (value) =>
-                          setState(() => _sendToChosen = value),
-                    ),
-                    const SizedBox(height: 16),
-                  ],
+                      _selectedCategoryName == widget.presetCategory)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: _TargetProviderCard(
+                        name: widget.targetProviderName ?? 'this provider',
+                        sendToChosen: _sendToChosen,
+                        onChanged: (value) =>
+                            setState(() => _sendToChosen = value),
+                      ),
+                    )
+                  else
+                    const SizedBox.shrink(),
 
                   // Section 1: Category
                   _SectionCard(
@@ -418,7 +457,9 @@ class _CreateServiceRequestScreenState
                   _SectionCard(
                     title: 'Service Location',
                     iconName: 'location_on',
-                    child: const RequestLocationWidget(),
+                    child: RequestLocationWidget(
+                      onNoteChanged: (value) => _locationNote = value,
+                    ),
                   ),
 
                   SizedBox(height: 100 + bottomPadding),

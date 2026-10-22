@@ -45,7 +45,6 @@ class RequestCategorySelectorWidget extends StatelessWidget {
     ),
     _Category(id: 'tutor', name: 'Tutor', iconName: 'school'),
     _Category(id: 'mason', name: 'Masonry', iconName: 'foundation'),
-    _Category(id: 'other', name: 'Other', iconName: 'more_horiz'),
   ];
 
   @override

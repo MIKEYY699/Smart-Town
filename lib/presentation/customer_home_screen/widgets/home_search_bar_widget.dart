@@ -65,17 +65,7 @@ class HomeSearchBarWidget extends StatelessWidget {
                     ),
                   ),
                 ),
-                GestureDetector(
-                  onTap: () {},
-                  child: Padding(
-                    padding: const EdgeInsets.only(right: 16),
-                    child: CustomIconWidget(
-                      iconName: 'mic_outlined',
-                      color: const Color(0xFF9E9E9E),
-                      size: 20,
-                    ),
-                  ),
-                ),
+                const SizedBox(width: 16),
               ],
             ),
           ),

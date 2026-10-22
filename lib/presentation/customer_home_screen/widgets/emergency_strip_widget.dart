@@ -57,7 +57,7 @@ class EmergencyStripWidget extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    'Urgent help available 24/7 in your area',
+                    'Find providers who are available right now',
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 11,
                       fontWeight: FontWeight.w400,

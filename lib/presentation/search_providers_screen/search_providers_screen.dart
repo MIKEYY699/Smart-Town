@@ -21,6 +21,9 @@ class _SearchProvidersScreenState extends State<SearchProvidersScreen> {
   late final TextEditingController _controller;
   late Future<List<Map<String, dynamic>>> _future;
   String _query = '';
+  bool _onlyVerified = false;
+  bool _onlyAvailable = false;
+  bool _onlyEmergency = false;
 
   @override
   void initState() {
@@ -41,7 +44,8 @@ class _SearchProvidersScreenState extends State<SearchProvidersScreen> {
     final rows = await Supabase.instance.client
         .from('providers')
         .select(
-          'id, full_name, photo_url, verification, availability, rating_avg, '
+          'id, full_name, photo_url, verification, availability, '
+          'emergency_available, rating_avg, '
           'rating_count, professions(name)',
         )
         .order('rating_avg', ascending: false);
@@ -55,8 +59,11 @@ class _SearchProvidersScreenState extends State<SearchProvidersScreen> {
 
   List<Map<String, dynamic>> _filter(List<Map<String, dynamic>> all) {
     final q = _query.toLowerCase();
-    if (q.isEmpty) return all;
     return all.where((p) {
+      if (_onlyVerified && p['verification'] != 'verified') return false;
+      if (_onlyAvailable && p['availability'] != 'available') return false;
+      if (_onlyEmergency && p['emergency_available'] != true) return false;
+      if (q.isEmpty) return true;
       final name = (p['full_name'] as String? ?? '').toLowerCase();
       final profession = _professionOf(p).toLowerCase();
       return name.contains(q) || profession.contains(q);
@@ -228,14 +235,47 @@ class _SearchProvidersScreenState extends State<SearchProvidersScreen> {
 
             final results = _filter(snapshot.data ?? []);
 
-            if (results.isEmpty) {
-              return const Center(child: Text('No providers found.'));
-            }
-
-            return ListView.builder(
-              padding: const EdgeInsets.all(20),
-              itemCount: results.length,
-              itemBuilder: (context, index) => _card(results[index]),
+            return Column(
+              children: [
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+                  child: Row(
+                    children: [
+                      FilterChip(
+                        label: const Text('Verified'),
+                        selected: _onlyVerified,
+                        onSelected: (value) =>
+                            setState(() => _onlyVerified = value),
+                      ),
+                      const SizedBox(width: 8),
+                      FilterChip(
+                        label: const Text('Available now'),
+                        selected: _onlyAvailable,
+                        onSelected: (value) =>
+                            setState(() => _onlyAvailable = value),
+                      ),
+                      const SizedBox(width: 8),
+                      FilterChip(
+                        label: const Text('Emergency'),
+                        selected: _onlyEmergency,
+                        onSelected: (value) =>
+                            setState(() => _onlyEmergency = value),
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: results.isEmpty
+                      ? const Center(child: Text('No providers found.'))
+                      : ListView.builder(
+                          padding: const EdgeInsets.all(20),
+                          itemCount: results.length,
+                          itemBuilder: (context, index) =>
+                              _card(results[index]),
+                        ),
+                ),
+              ],
             );
           },
         ),

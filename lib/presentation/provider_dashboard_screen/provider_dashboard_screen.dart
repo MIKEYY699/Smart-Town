@@ -132,7 +132,9 @@ class _ProviderDashboardScreenState extends State<ProviderDashboardScreen> {
       ratingCount: (provider['rating_count'] as num?)?.toInt() ?? 0,
       reviews: List<Map<String, dynamic>>.from(reviewRows),
       openRequests: open,
-      myJobs: await _withPhotoUrls(List<Map<String, dynamic>>.from(jobRows)),
+      myJobs: await _withLocationNotes(
+        await _withPhotoUrls(List<Map<String, dynamic>>.from(jobRows)),
+      ),
     );
   }
 
@@ -156,6 +158,30 @@ class _ProviderDashboardScreenState extends State<ProviderDashboardScreen> {
       result.add(copy);
     }
     return result;
+  }
+
+  /// The address note is only readable by the provider of an accepted job.
+  Future<List<Map<String, dynamic>>> _withLocationNotes(
+    List<Map<String, dynamic>> jobs,
+  ) async {
+    if (jobs.isEmpty) return jobs;
+    final ids = jobs.map((j) => j['id'] as String).toList();
+
+    final noteRows = await Supabase.instance.client
+        .from('request_locations')
+        .select('request_id, note')
+        .inFilter('request_id', ids);
+
+    final noteById = <String, String>{
+      for (final row in noteRows)
+        row['request_id'] as String: row['note'] as String? ?? '',
+    };
+
+    return jobs.map((job) {
+      final copy = Map<String, dynamic>.from(job);
+      copy['location_note'] = noteById[job['id']];
+      return copy;
+    }).toList();
   }
 
   Future<void> _refresh() async {
@@ -472,6 +498,34 @@ class _ProviderDashboardScreenState extends State<ProviderDashboardScreen> {
                   height: 60,
                   child: Center(child: Text('Photo could not load')),
                 ),
+              ),
+            ),
+          ],
+          if ((r['location_note'] as String?)?.isNotEmpty == true) ...[
+            const SizedBox(height: 10),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppTheme.primaryMuted,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(
+                    Icons.location_on,
+                    color: AppTheme.primary,
+                    size: 18,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      r['location_note'] as String,
+                      style: GoogleFonts.plusJakartaSans(fontSize: 13),
+                    ),
+                  ),
+                ],
               ),
             ),
           ],

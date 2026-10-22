@@ -30,7 +30,6 @@ void main() async {
     return SizedBox.shrink();
   };
 
-  // 🚨 CRITICAL: Device orientation lock - DO NOT REMOVE
   Future.wait([
     SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]),
   ]).then((value) {
@@ -51,7 +50,7 @@ class MyApp extends StatelessWidget {
           theme: AppTheme.lightTheme,
           darkTheme: AppTheme.darkTheme,
           themeMode: ThemeMode.light,
-          // 🚨 CRITICAL: NEVER REMOVE OR MODIFY
+
           builder: (context, child) {
             return MediaQuery(
               data: MediaQuery.of(
@@ -60,7 +59,7 @@ class MyApp extends StatelessWidget {
               child: child!,
             );
           },
-          // 🚨 END CRITICAL SECTION
+
           debugShowCheckedModeBanner: false,
           routerConfig: appRouter,
         );

@@ -154,12 +154,14 @@ class CustomImageWidget extends StatelessWidget {
             ),
             errorWidget: (context, url, error) =>
                 errorWidget ??
-                Image.asset(
-                  placeHolder,
+                Container(
                   height: height,
                   width: width,
-                  fit: fit ?? BoxFit.cover,
-                  semanticLabel: semanticLabel,
+                  color: const Color(0xFFF0F0F0),
+                  child: const Icon(
+                    Icons.image_not_supported_outlined,
+                    color: Color(0xFF9E9E9E),
+                  ),
                 ),
           );
         case ImageType.png:
