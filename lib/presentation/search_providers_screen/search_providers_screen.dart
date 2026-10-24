@@ -81,6 +81,25 @@ class _SearchProvidersScreenState extends State<SearchProvidersScreen> {
     }
   }
 
+  Widget _chip(String label, bool selected, ValueChanged<bool> onSelected) {
+    return FilterChip(
+      label: Text(label),
+      selected: selected,
+      onSelected: onSelected,
+      showCheckmark: false,
+      backgroundColor: Colors.white,
+      selectedColor: AppTheme.primary,
+      side: BorderSide(
+        color: selected ? AppTheme.primary : const Color(0xFFBDBDBD),
+      ),
+      labelStyle: GoogleFonts.plusJakartaSans(
+        fontSize: 13,
+        fontWeight: FontWeight.w700,
+        color: selected ? Colors.white : const Color(0xFF1A1A1A),
+      ),
+    );
+  }
+
   Widget _card(Map<String, dynamic> p) {
     final name = p['full_name'] as String? ?? '';
     final verified = p['verification'] == 'verified';
@@ -242,25 +261,22 @@ class _SearchProvidersScreenState extends State<SearchProvidersScreen> {
                   padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
                   child: Row(
                     children: [
-                      FilterChip(
-                        label: const Text('Verified'),
-                        selected: _onlyVerified,
-                        onSelected: (value) =>
-                            setState(() => _onlyVerified = value),
+                      _chip(
+                        'Verified',
+                        _onlyVerified,
+                        (value) => setState(() => _onlyVerified = value),
                       ),
                       const SizedBox(width: 8),
-                      FilterChip(
-                        label: const Text('Available now'),
-                        selected: _onlyAvailable,
-                        onSelected: (value) =>
-                            setState(() => _onlyAvailable = value),
+                      _chip(
+                        'Available now',
+                        _onlyAvailable,
+                        (value) => setState(() => _onlyAvailable = value),
                       ),
                       const SizedBox(width: 8),
-                      FilterChip(
-                        label: const Text('Emergency'),
-                        selected: _onlyEmergency,
-                        onSelected: (value) =>
-                            setState(() => _onlyEmergency = value),
+                      _chip(
+                        'Emergency',
+                        _onlyEmergency,
+                        (value) => setState(() => _onlyEmergency = value),
                       ),
                     ],
                   ),

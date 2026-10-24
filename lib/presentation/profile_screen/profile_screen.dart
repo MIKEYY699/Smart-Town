@@ -131,35 +131,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  Future<void> _editName(String currentName) async {
-    final newName = await showDialog<String>(
-      context: context,
-      builder: (_) => _NameDialog(initialName: currentName),
-    );
-    if (newName == null || newName == currentName || !mounted) return;
-
-    try {
-      final client = Supabase.instance.client;
-      final userId = client.auth.currentUser!.id;
-      await client
-          .from('profiles')
-          .update({'full_name': newName})
-          .eq('id', userId);
-      // Providers show their name on their listing too.
-      await client
-          .from('providers')
-          .update({'full_name': newName})
-          .eq('user_id', userId);
-      profileChangedNotifier.value++;
-      if (!mounted) return;
+  Future<void> _editProfile() async {
+    final saved = await context.push<bool>(AppRoutes.editProviderScreen);
+    if (saved == true && mounted) {
       setState(() {
         _future = _load();
       });
-    } catch (_) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not save your name. Try again.')),
-      );
     }
   }
 
@@ -373,9 +350,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 SizedBox(
                   height: 52,
                   child: OutlinedButton.icon(
-                    onPressed: () => _editName(name),
+                    onPressed: _editProfile,
                     icon: const Icon(Icons.edit_outlined),
-                    label: const Text('Edit name'),
+                    label: const Text('Edit profile'),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -404,66 +381,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
           },
         ),
       ),
-    );
-  }
-}
-
-/// Asks for a new name. It owns its own text controller.
-class _NameDialog extends StatefulWidget {
-  final String initialName;
-
-  const _NameDialog({required this.initialName});
-
-  @override
-  State<_NameDialog> createState() => _NameDialogState();
-}
-
-class _NameDialogState extends State<_NameDialog> {
-  late final TextEditingController _controller;
-  String? _error;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = TextEditingController(text: widget.initialName);
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  void _save() {
-    final name = _controller.text.trim();
-    if (name.length < 2) {
-      setState(() => _error = 'Enter your name');
-      return;
-    }
-    FocusScope.of(context).unfocus();
-    Navigator.of(context).pop(name);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('Edit your name'),
-      content: TextField(
-        controller: _controller,
-        maxLength: 60,
-        textCapitalization: TextCapitalization.words,
-        decoration: InputDecoration(
-          border: const OutlineInputBorder(),
-          errorText: _error,
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
-        ),
-        ElevatedButton(onPressed: _save, child: const Text('Save')),
-      ],
     );
   }
 }

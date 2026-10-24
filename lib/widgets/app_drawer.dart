@@ -128,25 +128,49 @@ class _AppDrawerState extends State<AppDrawer> {
             Expanded(
               child: ListView(
                 children: [
-                  _item(Icons.home_outlined, 'Home',
-                      () => _go(AppRoutes.customerHomeScreen)),
-                  _item(Icons.assignment_outlined, 'My requests',
-                      () => _go(AppRoutes.myRequestsScreen)),
-                  _item(Icons.notifications_none, 'Notifications',
-                      () => _open(AppRoutes.notificationsScreen)),
-                  _item(Icons.emergency_outlined, 'Emergency services',
-                      () => _open(AppRoutes.emergencyScreen)),
+                  _item(
+                    Icons.home_outlined,
+                    'Home',
+                    () => _go(AppRoutes.customerHomeScreen),
+                  ),
+                  _item(
+                    Icons.assignment_outlined,
+                    'My requests',
+                    () => _go(AppRoutes.myRequestsScreen),
+                  ),
+                  _item(
+                    Icons.notifications_none,
+                    'Notifications',
+                    () => _open(AppRoutes.notificationsScreen),
+                  ),
+                  _item(
+                    Icons.emergency_outlined,
+                    'Emergency services',
+                    () => _open(AppRoutes.emergencyScreen),
+                  ),
                   if (_role == 'provider')
-                    _item(Icons.dashboard_outlined, 'Provider dashboard',
-                        () => _open(AppRoutes.providerDashboardScreen)),
+                    _item(
+                      Icons.dashboard_outlined,
+                      'Provider dashboard',
+                      () => _open(AppRoutes.providerDashboardScreen),
+                    ),
                   if (_role == 'customer')
-                    _item(Icons.handyman_outlined, 'Become a provider',
-                        () => _open(AppRoutes.becomeProviderScreen)),
+                    _item(
+                      Icons.handyman_outlined,
+                      'Become a provider',
+                      () => _open(AppRoutes.becomeProviderScreen),
+                    ),
                   if (_role == 'admin')
-                    _item(Icons.admin_panel_settings_outlined, 'Admin panel',
-                        () => _open(AppRoutes.adminScreen)),
-                  _item(Icons.person_outline, 'My profile',
-                      () => _go('/profile')),
+                    _item(
+                      Icons.admin_panel_settings_outlined,
+                      'Admin panel',
+                      () => _open(AppRoutes.adminScreen),
+                    ),
+                  _item(
+                    Icons.person_outline,
+                    'My profile',
+                    () => _go('/profile'),
+                  ),
                 ],
               ),
             ),

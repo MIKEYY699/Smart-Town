@@ -18,6 +18,7 @@ import '../presentation/emergency_screen/emergency_screen.dart';
 import '../presentation/chat_screen/chat_screen.dart';
 import '../presentation/admin_screen/admin_screen.dart';
 import '../presentation/notifications_screen/notifications_screen.dart';
+import '../presentation/edit_provider_screen/edit_provider_screen.dart';
 
 class AppRoutes {
   static const String initial = '/';
@@ -31,6 +32,7 @@ class AppRoutes {
   static const String chatScreen = '/chat';
   static const String adminScreen = '/admin';
   static const String notificationsScreen = '/notifications';
+    static const String editProviderScreen = '/edit-provider';
   static const String customerHomeScreen = '/customer-home-screen';
   static const String providerProfileScreen = '/provider-profile-screen';
   static const String createServiceRequestScreen =
@@ -94,6 +96,10 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: AppRoutes.notificationsScreen,
       builder: (context, state) => const NotificationsScreen(),
+    ),
+        GoRoute(
+      path: AppRoutes.editProviderScreen,
+      builder: (context, state) => const EditProviderScreen(),
     ),
     StatefulShellRoute.indexedStack(
       builder: (context, state, navigationShell) {

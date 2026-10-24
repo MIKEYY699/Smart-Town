@@ -699,6 +699,21 @@ class _ProviderDashboardScreenState extends State<ProviderDashboardScreen> {
                     ),
                   _ratingSummary(data),
                   _controls(data),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 12),
+                    child: OutlinedButton.icon(
+                      onPressed: () async {
+                        final saved = await context.push<bool>(
+                          AppRoutes.editProviderScreen,
+                        );
+                        if (saved == true && mounted) {
+                          _refresh();
+                        }
+                      },
+                      icon: const Icon(Icons.edit_outlined),
+                      label: const Text('Edit my profile'),
+                    ),
+                  ),
                   if (verified) ...[
                     _sectionTitle('New requests (${data.openRequests.length})'),
                     if (data.openRequests.isEmpty)
