@@ -58,6 +58,11 @@ class _EditProviderScreenState extends State<EditProviderScreen> {
     super.dispose();
   }
 
+  String _titleCase(String value) {
+    if (value.isEmpty) return value;
+    return value[0].toUpperCase() + value.substring(1).toLowerCase();
+  }
+
   TimeOfDay? _parseTime(String? value) {
     if (value == null || value.isEmpty) return null;
     final parts = value.split(':');
@@ -111,7 +116,9 @@ class _EditProviderScreenState extends State<EditProviderScreen> {
               : '${row['starting_price']}';
           _days
             ..clear()
-            ..addAll(((row['work_days'] as List?) ?? []).map((d) => '$d'));
+            ..addAll(
+              ((row['work_days'] as List?) ?? []).map((d) => _titleCase('$d')),
+            );
           _from = _parseTime(row['work_from'] as String?);
           _to = _parseTime(row['work_to'] as String?);
         }
@@ -189,7 +196,8 @@ class _EditProviderScreenState extends State<EditProviderScreen> {
               'description': _descriptionController.text.trim(),
               'experience_years': int.parse(_experienceController.text.trim()),
               'starting_price': priceText.isEmpty ? null : int.parse(priceText),
-              'work_days': orderedDays,
+              // The database only accepts lowercase names such as mon, tue.
+              'work_days': orderedDays.map((d) => d.toLowerCase()).toList(),
               'work_from': _from == null ? null : _storeTime(_from!),
               'work_to': _to == null ? null : _storeTime(_to!),
             })

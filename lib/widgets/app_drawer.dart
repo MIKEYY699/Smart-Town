@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' show Supabase;
 
+import '../core/push_service.dart';
 import '../routes/app_routes.dart';
 import '../theme/app_theme.dart';
 import './avatar_widget.dart';
@@ -59,6 +60,7 @@ class _AppDrawerState extends State<AppDrawer> {
   Future<void> _logOut() async {
     Navigator.of(context).pop();
     try {
+      await PushService.unregister();
       await Supabase.instance.client.auth.signOut();
     } catch (_) {
       // Go to the login screen anyway.

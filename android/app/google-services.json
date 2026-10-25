@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "117481662751",
+    "project_id": "smart-town-da2d2",
+    "storage_bucket": "smart-town-da2d2.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:117481662751:android:779435718f40dfd014282a",
+        "android_client_info": {
+          "package_name": "com.example.mohallaconnect"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDMG9Ocd7fcgD4ujxHPqnX0kzHpgye9o2Q"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

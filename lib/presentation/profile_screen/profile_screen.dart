@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart'
     show FileOptions, Supabase;
 
+import '../../core/push_service.dart';
 import '../../routes/app_routes.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/avatar_widget.dart';
@@ -44,6 +45,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _logOut() async {
     setState(() => _isLoggingOut = true);
     try {
+      await PushService.unregister();
       await Supabase.instance.client.auth.signOut();
       if (!mounted) return;
       context.go(AppRoutes.authScreen);
@@ -168,6 +170,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     try {
       final client = Supabase.instance.client;
+      await PushService.unregister();
       await client.rpc('delete_my_account');
       try {
         await client.auth.signOut();

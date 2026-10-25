@@ -39,8 +39,10 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen> {
     final provider = await client
         .from('providers')
         .select(
-          'id, full_name, photo_url, description, experience_years, verification, '
+          'id, full_name, photo_url, description, experience_years, '
+          'starting_price, work_days, work_from, work_to, verification, '
           'availability, emergency_available, rating_avg, rating_count, '
+          'starting_price, work_days, work_from, work_to, '
           'professions(name, category)',
         )
         .eq('id', widget.providerId)
@@ -58,6 +60,47 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen> {
     return _ProfileData(
       Map<String, dynamic>.from(provider),
       List<Map<String, dynamic>>.from(reviews),
+    );
+  }
+
+  static const List<(String, String)> _weekDays = [
+    ('mon', 'Mon'),
+    ('tue', 'Tue'),
+    ('wed', 'Wed'),
+    ('thu', 'Thu'),
+    ('fri', 'Fri'),
+    ('sat', 'Sat'),
+    ('sun', 'Sun'),
+  ];
+
+  String _daysText(List<String> days) {
+    if (days.length == 7) return 'Every day';
+    return _weekDays
+        .where((d) => days.contains(d.$1))
+        .map((d) => d.$2)
+        .join(', ');
+  }
+
+  String _timeText(String value) {
+    final parts = value.split(':');
+    final hour = int.tryParse(parts[0]) ?? 0;
+    final minute = parts.length > 1 ? parts[1] : '00';
+    final hour12 = hour % 12 == 0 ? 12 : hour % 12;
+    return '$hour12:$minute ${hour >= 12 ? 'PM' : 'AM'}';
+  }
+
+  Widget _infoRow(IconData icon, String text) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: AppTheme.primary),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(text, style: GoogleFonts.plusJakartaSans(fontSize: 13)),
+          ),
+        ],
+      ),
     );
   }
 
@@ -211,6 +254,10 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen> {
             final years = (p['experience_years'] as num?)?.toInt() ?? 0;
             final description = p['description'] as String? ?? '';
             final emergency = p['emergency_available'] == true;
+            final startingPrice = (p['starting_price'] as num?)?.toInt();
+            final workDays = List<String>.from(p['work_days'] as List? ?? []);
+            final workFrom = p['work_from'] as String?;
+            final workTo = p['work_to'] as String?;
 
             return Column(
               children: [
@@ -296,6 +343,27 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen> {
                           _stat('$years yr', 'Experience'),
                         ],
                       ),
+                      if (startingPrice != null ||
+                          workDays.isNotEmpty ||
+                          (workFrom != null && workTo != null)) ...[
+                        _title('Price and hours'),
+                        if (startingPrice != null)
+                          _infoRow(
+                            Icons.payments_outlined,
+                            'Starting from Rs. $startingPrice '
+                            '(final price depends on the job)',
+                          ),
+                        if (workDays.isNotEmpty)
+                          _infoRow(
+                            Icons.calendar_today_outlined,
+                            _daysText(workDays),
+                          ),
+                        if (workFrom != null && workTo != null)
+                          _infoRow(
+                            Icons.access_time,
+                            '${_timeText(workFrom)} to ${_timeText(workTo)}',
+                          ),
+                      ],
                       if (description.isNotEmpty) ...[
                         _title('About'),
                         Text(

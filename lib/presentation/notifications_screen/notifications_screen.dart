@@ -3,7 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' show Supabase;
 
-import '../../routes/app_routes.dart';
+import '../../core/push_service.dart';
 import '../../theme/app_theme.dart';
 
 /// The user's notifications. New ones appear live.
@@ -60,11 +60,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
     if (!mounted) return;
 
-    if (type == 'new_request' || type == 'cancelled' || type == 'review') {
-      context.push(AppRoutes.providerDashboardScreen);
-    } else if (type == 'status') {
-      context.go(AppRoutes.myRequestsScreen);
-    }
+    PushService.openTarget(GoRouter.of(context), type);
   }
 
   String _ago(String? iso) {

@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:sizer/sizer.dart';
 
 import '../core/app_export.dart';
+import '../core/push_service.dart';
 import '../widgets/custom_error_widget.dart';
 
 void main() async {
@@ -12,10 +13,11 @@ void main() async {
     url: 'https://qrhxvubpyigocvtflgvn.supabase.co',
     publishableKey: 'sb_publishable__85Hn7kQDFuMWl3S7ar9LQ__Wc52SYy',
   );
+  await PushService.init();
 
   bool hasShownError = false;
 
-  // 🚨 CRITICAL: Custom error handling - DO NOT REMOVE
+
   ErrorWidget.builder = (FlutterErrorDetails details) {
     if (!hasShownError) {
       hasShownError = true;
